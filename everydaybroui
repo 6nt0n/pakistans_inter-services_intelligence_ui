@@ -978,10 +978,71 @@ function Library:CreateWindow(options)
 	BindThemeUpdater({"Accent"}, updateTopLineGradient)
 	updateTopLineGradient()
 
-	-- GRADIENT TITLE WITH LOGO SUPPORT
 	local titleText = options.Title or "junt.hax.club"
 	local logoImage = options.Logo or options.LogoImage or nil
 	local logoSize = options.LogoSize or 18
+	
+	-- GitHub image loader
+	local function LoadGithubImage(url)
+		if type(url) ~= "string" or not url:match("^https?://") then
+			return url
+		end
+	
+		-- Convert normal GitHub blob URL to raw URL
+		url = url:gsub(
+			"https://github%.com/([^/]+/[^/]+)/blob/([^/]+)/(.+)",
+			"https://raw.githubusercontent.com/%1/%2/%3"
+		)
+	
+		local filename = "junt_ui/github_logo.png"
+	
+		local success, data = pcall(function()
+			return game:HttpGet(url)
+		end)
+	
+		if not success or type(data) ~= "string" or #data == 0 then
+			warn("junt_ui: failed to download image: " .. url)
+			return nil
+		end
+	
+		if writefile then
+			pcall(function()
+				if makefolder and (not isfolder or not isfolder("junt_ui")) then
+					makefolder("junt_ui")
+				end
+	
+				writefile(filename, data)
+			end)
+		end
+	
+		-- Convert the downloaded file into an image asset
+		if getcustomasset then
+			local ok, asset = pcall(function()
+				return getcustomasset(filename)
+			end)
+	
+			if ok then
+				return asset
+			end
+		end
+	
+		if getsynasset then
+			local ok, asset = pcall(function()
+				return getsynasset(filename)
+			end)
+	
+			if ok then
+				return asset
+			end
+		end
+	
+		return nil
+	end
+	
+	-- Load GitHub logo if a URL was supplied
+	if type(logoImage) == "string" and logoImage:match("^https?://") then
+		logoImage = LoadGithubImage(logoImage)
+	end
 	
 	local titleContainer = New("Frame", {
 		Parent = top,
@@ -1002,17 +1063,18 @@ function Library:CreateWindow(options)
 			Image = logoImage,
 			ScaleType = Enum.ScaleType.Fit
 		})
+	
 		currentLogoX = logoSize + 4
 	end
 	
-	-- Create gradient title with per-character coloring
+	-- Gradient title with per-character coloring
 	local white = Color3.fromRGB(255, 255, 255)
 	local titleLabels = {}
 	
 	local function updateTitleGradient()
 		local titleLength = #titleText
 		local accentColor = Library.Theme.Accent
-		
+	
 		for i, label in ipairs(titleLabels) do
 			if label and label.Parent then
 				local progress = (i - 1) / math.max(titleLength - 1, 1)
@@ -1024,10 +1086,14 @@ function Library:CreateWindow(options)
 	
 	for i = 1, #titleText do
 		local char = titleText:sub(i, i)
+	
 		local label = New("TextLabel", {
 			Parent = titleContainer,
 			BackgroundTransparency = 1,
-			Position = UDim2.fromOffset(currentLogoX + (i - 1) * 6, 0),
+			Position = UDim2.fromOffset(
+				currentLogoX + (i - 1) * 6,
+				0
+			),
 			Size = UDim2.fromOffset(6, 26),
 			Text = char,
 			Font = Enum.Font.Code,
@@ -1036,6 +1102,7 @@ function Library:CreateWindow(options)
 			TextXAlignment = Enum.TextXAlignment.Center,
 			TextYAlignment = Enum.TextYAlignment.Center
 		})
+	
 		table.insert(titleLabels, label)
 	end
 	
