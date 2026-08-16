@@ -664,6 +664,14 @@ local function KeyFromValue(value)
 	return Enum.KeyCode[keyName] or Enum.UserInputType[keyName]
 end
 
+local function LerpColor(color1, color2, t)
+	return Color3.new(
+		color1.R + (color2.R - color1.R) * t,
+		color1.G + (color2.G - color1.G) * t,
+		color1.B + (color2.B - color1.B) * t
+	)
+end
+
 function Library:RefreshKeybinds()
 	if not self.KeybindBox or not self.KeybindInner then return end
 
@@ -970,18 +978,69 @@ function Library:CreateWindow(options)
 	BindThemeUpdater({"Accent"}, updateTopLineGradient)
 	updateTopLineGradient()
 
-	local title = New("TextLabel", {
+	-- GRADIENT TITLE WITH LOGO SUPPORT
+	local titleText = options.Title or "junt.hax.club"
+	local logoImage = options.Logo or options.LogoImage or nil
+	local logoSize = options.LogoSize or 18
+	
+	local titleContainer = New("Frame", {
 		Parent = top,
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(7, 0),
-		Size = UDim2.fromOffset(150, 26),
-		Text = options.Title or "junt.hax.club",
-		Font = Enum.Font.Code,
-		TextSize = 10,
-		TextColor3 = self.Theme.Text,
-		TextXAlignment = Enum.TextXAlignment.Left
+		Size = UDim2.fromOffset(300, 26)
 	})
-	BindTheme(title, "TextColor3", "Text")
+	
+	local currentLogoX = 0
+	
+	-- Add logo if provided
+	if logoImage then
+		local logo = New("ImageLabel", {
+			Parent = titleContainer,
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(0, 4),
+			Size = UDim2.fromOffset(logoSize, logoSize),
+			Image = logoImage,
+			ScaleType = Enum.ScaleType.Fit
+		})
+		currentLogoX = logoSize + 4
+	end
+	
+	-- Create gradient title with per-character coloring
+	local white = Color3.fromRGB(255, 255, 255)
+	local titleLabels = {}
+	
+	local function updateTitleGradient()
+		local titleLength = #titleText
+		local accentColor = Library.Theme.Accent
+		
+		for i, label in ipairs(titleLabels) do
+			if label and label.Parent then
+				local progress = (i - 1) / math.max(titleLength - 1, 1)
+				local charColor = LerpColor(white, accentColor, progress)
+				label.TextColor3 = charColor
+			end
+		end
+	end
+	
+	for i = 1, #titleText do
+		local char = titleText:sub(i, i)
+		local label = New("TextLabel", {
+			Parent = titleContainer,
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(currentLogoX + (i - 1) * 6, 0),
+			Size = UDim2.fromOffset(6, 26),
+			Text = char,
+			Font = Enum.Font.Code,
+			TextSize = 10,
+			TextColor3 = white,
+			TextXAlignment = Enum.TextXAlignment.Center,
+			TextYAlignment = Enum.TextYAlignment.Center
+		})
+		table.insert(titleLabels, label)
+	end
+	
+	BindThemeUpdater({"Accent"}, updateTitleGradient)
+	updateTitleGradient()
 
 	local tabHolder = New("Frame", {
 		Parent = top,
@@ -2999,7 +3058,9 @@ function Library:Window(Data)
 	Data = Data or {}
 	local window = self:CreateWindow({
 		Title = Data.Name or Data.name or Data.Title or Data.title or "junt.hax.club",
-		Size = Data.Size or Data.size or UDim2.fromOffset(560, 500)
+		Size = Data.Size or Data.size or UDim2.fromOffset(560, 500),
+		Logo = Data.Logo or Data.logo or Data.LogoImage or Data.logoImage or nil,
+		LogoSize = Data.LogoSize or Data.logoSize or 18
 	})
 	self.CurrentWindow = window
 	self.Gui = window.Gui
@@ -3009,8 +3070,6 @@ end
 function Library:Create(Data)
 	return self:Window(Data)
 end
-
-
 
 function Library:Notification(message, duration)
 	return self:Notify(message, duration)
