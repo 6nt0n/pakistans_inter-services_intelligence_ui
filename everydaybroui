@@ -1217,8 +1217,6 @@ function Library:CreateWindow(options)
 		Stroke(popup, Library.Theme.Border, 1, "Border")
 	
 		-- saturation / value square
-		-- left -> right: white fades out (saturation up)
-		-- top -> bottom: black fades in (value down)
 		local sv = New("Frame", {
 			Parent = popup,
 			Position = UDim2.fromOffset(PAD, PAD),
@@ -1261,7 +1259,7 @@ function Library:CreateWindow(options)
 			})
 		})
 	
-		-- hue strip (top -> bottom must match Color3.fromHSV order)
+		-- hue strip
 		local hue = New("Frame", {
 			Parent = popup,
 			Position = UDim2.fromOffset(HUE_X, PAD),
@@ -1285,7 +1283,7 @@ function Library:CreateWindow(options)
 			})
 		})
 	
-		-- cursors live on the popup so they never get clipped at the edges
+		-- cursors
 		local svCursor = New("Frame", {
 			Parent = popup,
 			AnchorPoint = Vector2.new(0.5, 0.5),
@@ -1318,7 +1316,7 @@ function Library:CreateWindow(options)
 		})
 		New("UIStroke", {Parent = hueCursor, Color = black, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border})
 	
-		-- invisible hit areas on top, they receive the mouse input
+		-- invisible hit areas
 		local svHit = New("TextButton", {
 			Parent = popup,
 			Position = UDim2.fromOffset(PAD, PAD),
@@ -1338,7 +1336,7 @@ function Library:CreateWindow(options)
 			ZIndex = 150
 		})
 	
-		-- text fields (same look as the other controls)
+		-- text fields
 		local function makeField(x, y, w, placeholder)
 			local field = New("Frame", {
 				Parent = popup,
@@ -1395,11 +1393,6 @@ function Library:CreateWindow(options)
 		local hexBox = makeField(PAD, HEX_Y, POPUP_W - PAD * 2, "#RRGGBB")
 	
 		-- helpers
-		local function mousePos()
-			-- GetMouseLocation matches AbsolutePosition on gui that ignores the top bar inset
-			return UIS:GetMouseLocation()
-		end
-	
 		local function pointInside(guiObject, point)
 			local pos, size = guiObject.AbsolutePosition, guiObject.AbsoluteSize
 			return point.X >= pos.X and point.X <= pos.X + size.X and point.Y >= pos.Y and point.Y <= pos.Y + size.Y
@@ -1443,7 +1436,7 @@ function Library:CreateWindow(options)
 		local function applyColor(color)
 			local h, s, v = Color3.toHSV(color)
 			if s > 0 and v > 0 then
-				H = h -- keep the hue when the color is grey or black
+				H = h
 			end
 			S, V = s, v
 			update(false)
@@ -1474,7 +1467,7 @@ function Library:CreateWindow(options)
 			if parsed then
 				applyColor(parsed)
 			else
-				update(true) -- bad input, put the real value back
+				update(true)
 			end
 		end
 	
@@ -1514,17 +1507,17 @@ function Library:CreateWindow(options)
 			return currentColor
 		end
 	
-		-- input
+		-- input (uses input.Position everywhere)
 		svHit.InputBegan:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 then
 				draggingSV = true
-				setSV(mousePos())
+				setSV(input.Position)
 			end
 		end)
 		hueHit.InputBegan:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 then
 				draggingHue = true
-				setHue(mousePos())
+				setHue(input.Position)
 			end
 		end)
 	
@@ -1542,23 +1535,22 @@ function Library:CreateWindow(options)
 		AddConnection(UIS.InputChanged, function(input)
 			if input.UserInputType == Enum.UserInputType.MouseMovement then
 				if draggingSV then
-					setSV(mousePos())
+					setSV(input.Position)
 				elseif draggingHue then
-					setHue(mousePos())
+					setHue(input.Position)
 				end
 			end
 		end)
 		AddConnection(UIS.InputBegan, function(input, gp)
 			if gp or not open then return end
 			if input.UserInputType == Enum.UserInputType.MouseButton1 then
-				local pos = mousePos()
+				local pos = input.Position
 				if not pointInside(popup, pos) and not pointInside(anchor, pos) then
 					picker:SetOpen(false)
 				end
 			end
 		end)
 	
-		-- follow the swatch if the window gets dragged or scrolled
 		anchor:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
 			if open then
 				positionPopup()
@@ -1568,7 +1560,6 @@ function Library:CreateWindow(options)
 		update(true)
 		return picker
 	end
-
 	function window:Tab(name)
 		local tabLabel = string.lower(tostring(name)) -- tabs are lowercase like the reference
 		local button = New("TextButton", {
