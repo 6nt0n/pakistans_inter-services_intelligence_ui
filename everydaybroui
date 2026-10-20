@@ -52,23 +52,23 @@ local Library = {
 	TextSize = 13,
 
 	Theme = {
-		Bg = Color3.fromRGB(12, 12, 12),               -- window
-		Bg2 = Color3.fromRGB(9, 9, 9),                 -- top bar
-		Bg3 = Color3.fromRGB(23, 23, 23),              -- toggle box
-		Section = Color3.fromRGB(17, 17, 17),          -- section background
-		ControlTop = Color3.fromRGB(39, 39, 39),       -- buttons / sliders / dropdowns
-		ControlBottom = Color3.fromRGB(30, 30, 30),
-		Outline = Color3.fromRGB(46, 46, 46),          -- section border
-		Outline2 = Color3.fromRGB(44, 44, 44),         -- control border
-		Border = Color3.fromRGB(66, 64, 72),           -- window border
-		Text = Color3.fromRGB(228, 228, 228),
-		Dim = Color3.fromRGB(176, 176, 176),
-		Faint = Color3.fromRGB(105, 105, 105),
-		Accent = Color3.fromRGB(0, 235, 165),
-		SliderFill = Color3.fromRGB(165, 165, 190),
-		Line = Color3.fromRGB(208, 202, 228),          -- line under the title bar
-		TabInactive = Color3.fromRGB(128, 128, 128),
-		TabInactiveHover = Color3.fromRGB(170, 170, 170)
+		Bg = Color3.fromRGB(7, 7, 9),
+		Bg2 = Color3.fromRGB(10, 10, 13),
+		Bg3 = Color3.fromRGB(18, 18, 21),
+		Section = Color3.fromRGB(19, 19, 19),
+		ControlTop = Color3.fromRGB(39, 36, 38),
+		ControlBottom = Color3.fromRGB(12, 10, 12),
+		Outline = Color3.fromRGB(38, 30, 34),
+		Outline2 = Color3.fromRGB(28, 20, 24),
+		Border = Color3.fromRGB(38, 30, 34),
+		Text = Color3.fromRGB(232, 210, 218),
+		Dim = Color3.fromRGB(190, 164, 174),
+		Faint = Color3.fromRGB(136, 110, 120),
+		Accent = Color3.fromRGB(211, 170, 182),
+		SliderFill = Color3.fromRGB(211, 170, 182),
+		Line = Color3.fromRGB(211, 170, 182),
+		TabInactive = Color3.fromRGB(135, 125, 135),
+		TabInactiveHover = Color3.fromRGB(165, 150, 165)
 	}
 }
 
