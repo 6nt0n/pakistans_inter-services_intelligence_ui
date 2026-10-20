@@ -1,4 +1,3 @@
-
 if getgenv().Library and type(getgenv().Library) == "table" and getgenv().Library.Unload then
 	pcall(function()
 		getgenv().Library:Unload()
@@ -11,6 +10,7 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local HttpService = game:GetService("HttpService")
+local TextService = game:GetService("TextService")
 
 local LocalPlayer = Players.LocalPlayer
 local localPlayerStart = os.clock()
@@ -47,21 +47,28 @@ local Library = {
 	MenuKeybind = tostring(Enum.KeyCode.Insert),
 	ConfigFolder = "junt_ui/configs",
 
+	-- change these two to swap the font for the whole ui
+	Font = Enum.Font.SourceSans,
+	TextSize = 13,
+
 	Theme = {
-		Bg = Color3.fromRGB(7, 7, 9),
-		Bg2 = Color3.fromRGB(10, 10, 13),
-		Bg3 = Color3.fromRGB(18, 18, 21),
-		Bg4 = Color3.fromRGB(24, 24, 28),
-		ControlTop = Color3.fromRGB(39, 36, 38),
-		ControlBottom = Color3.fromRGB(12, 10, 12),
-		Outline = Color3.fromRGB(38, 30, 34),
-		Outline2 = Color3.fromRGB(28, 20, 24),
-		Text = Color3.fromRGB(232, 210, 218),
-		Dim = Color3.fromRGB(190, 164, 174),
-		Faint = Color3.fromRGB(136, 110, 120),
-		Accent = Color3.fromRGB(211, 170, 182),
-		TabInactive = Color3.fromRGB(135, 125, 135),
-		TabInactiveHover = Color3.fromRGB(165, 150, 165)
+		Bg = Color3.fromRGB(12, 12, 12),               -- window
+		Bg2 = Color3.fromRGB(9, 9, 9),                 -- top bar
+		Bg3 = Color3.fromRGB(23, 23, 23),              -- toggle box
+		Section = Color3.fromRGB(17, 17, 17),          -- section background
+		ControlTop = Color3.fromRGB(39, 39, 39),       -- buttons / sliders / dropdowns
+		ControlBottom = Color3.fromRGB(30, 30, 30),
+		Outline = Color3.fromRGB(46, 46, 46),          -- section border
+		Outline2 = Color3.fromRGB(44, 44, 44),         -- control border
+		Border = Color3.fromRGB(66, 64, 72),           -- window border
+		Text = Color3.fromRGB(228, 228, 228),
+		Dim = Color3.fromRGB(176, 176, 176),
+		Faint = Color3.fromRGB(105, 105, 105),
+		Accent = Color3.fromRGB(0, 235, 165),
+		SliderFill = Color3.fromRGB(165, 165, 190),
+		Line = Color3.fromRGB(208, 202, 228),          -- line under the title bar
+		TabInactive = Color3.fromRGB(128, 128, 128),
+		TabInactiveHover = Color3.fromRGB(170, 170, 170)
 	}
 }
 
@@ -73,6 +80,10 @@ end
 
 local function New(class, props)
 	local obj = Instance.new(class)
+	if class == "TextLabel" or class == "TextButton" or class == "TextBox" then
+		obj.Font = Library.Font
+		obj.TextSize = Library.TextSize
+	end
 	for k, v in pairs(props or {}) do
 		obj[k] = v
 	end
@@ -89,8 +100,18 @@ local function Tween(obj, props, time)
 	return tw
 end
 
+local function TextWidth(text, size)
+	local ok, bounds = pcall(function()
+		return TextService:GetTextSize(tostring(text), size or Library.TextSize, Library.Font, Vector2.new(10000, 1000))
+	end)
+	if ok and bounds then
+		return bounds.X
+	end
+	return #tostring(text) * 6
+end
+
 function Library:Notify(data, duration)
-	local title = "notification"
+	local title = "Notification"
 	local message = ""
 	local time = duration or 3
 	if typeof(data) == "table" then
@@ -114,14 +135,14 @@ function Library:Notify(data, duration)
 			Parent = notifyGui,
 			AnchorPoint = Vector2.new(1, 0),
 			Position = UDim2.new(1, -12, 0, 12),
-			Size = UDim2.fromOffset(210, 0),
+			Size = UDim2.fromOffset(230, 0),
 			BackgroundTransparency = 1,
 			AutomaticSize = Enum.AutomaticSize.Y
 		})
 		New("UIListLayout", {
 			Parent = holder,
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, 8),
+			Padding = UDim.new(0, 6),
 			HorizontalAlignment = Enum.HorizontalAlignment.Right
 		})
 		self.NotificationGui = notifyGui
@@ -130,70 +151,58 @@ function Library:Notify(data, duration)
 
 	local notification = New("Frame", {
 		Parent = self.NotificationHolder,
-		Size = UDim2.fromOffset(210, 46),
-		BackgroundColor3 = self.Theme.Bg2,
+		Size = UDim2.fromOffset(230, 42),
+		BackgroundColor3 = self.Theme.Section,
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ClipsDescendants = true
 	})
-	New("UIStroke", {Parent = notification, Color = self.Theme.Outline, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border})
-
-	local inner = New("Frame", {
+	local nStroke = New("UIStroke", {
 		Parent = notification,
-		Position = UDim2.fromOffset(5, 5),
-		Size = UDim2.new(1, -10, 1, -10),
-		BackgroundColor3 = self.Theme.Bg,
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0
+		Color = self.Theme.Border,
+		Thickness = 1,
+		Transparency = 1,
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	})
-	New("UIStroke", {Parent = inner, Color = self.Theme.Outline2, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border})
-
-	local line = New("Frame", {
-		Parent = inner,
-		Position = UDim2.fromOffset(1, 1),
-		Size = UDim2.new(1, -2, 0, 2),
+	local bar = New("Frame", {
+		Parent = notification,
+		Size = UDim2.new(0, 2, 1, 0),
 		BackgroundColor3 = self.Theme.Accent,
-		BackgroundTransparency = 0.04,
+		BackgroundTransparency = 1,
 		BorderSizePixel = 0
 	})
-	New("UIGradient", {
-		Parent = line,
-		Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, self.Theme.Accent),
-			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 248, 250)),
-			ColorSequenceKeypoint.new(1, self.Theme.Accent)
-		})
-	})
-
 	local titleLabel = New("TextLabel", {
-		Parent = inner,
+		Parent = notification,
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(8, 5),
-		Size = UDim2.new(1, -16, 0, 13),
-		Text = string.lower(title),
-		Font = Enum.Font.Code,
-		TextSize = 10,
+		Position = UDim2.fromOffset(10, 5),
+		Size = UDim2.new(1, -16, 0, 14),
+		Text = title,
 		TextColor3 = self.Theme.Text,
+		TextTransparency = 1,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd
 	})
-
 	local messageLabel = New("TextLabel", {
-		Parent = inner,
+		Parent = notification,
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(8, 19),
-		Size = UDim2.new(1, -16, 0, 13),
-		Text = string.lower(message),
-		Font = Enum.Font.Code,
-		TextSize = 10,
+		Position = UDim2.fromOffset(10, 22),
+		Size = UDim2.new(1, -16, 0, 14),
+		Text = message,
 		TextColor3 = self.Theme.Dim,
+		TextTransparency = 1,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd
 	})
 
 	local scale = New("UIScale", {Parent = notification, Scale = 0.96})
-	Tween(notification, {BackgroundTransparency = 0}, 0.12)
-	Tween(inner, {BackgroundTransparency = 0}, 0.12)
+	local function fade(a)
+		Tween(notification, {BackgroundTransparency = a}, 0.12)
+		Tween(nStroke, {Transparency = a}, 0.12)
+		Tween(bar, {BackgroundTransparency = a}, 0.12)
+		Tween(titleLabel, {TextTransparency = a}, 0.12)
+		Tween(messageLabel, {TextTransparency = a}, 0.12)
+	end
+	fade(0)
 	Tween(scale, {Scale = 1}, 0.12)
 
 	local closed = false
@@ -201,8 +210,7 @@ function Library:Notify(data, duration)
 		if closed then return end
 		closed = true
 		Tween(scale, {Scale = 0.96}, 0.12)
-		Tween(notification, {BackgroundTransparency = 1}, 0.12)
-		Tween(inner, {BackgroundTransparency = 1}, 0.12)
+		fade(1)
 		task.delay(0.13, function()
 			if notification and notification.Parent then
 				notification:Destroy()
@@ -216,95 +224,6 @@ end
 
 Library.Notification = Library.Notify
 Library.CreateNotification = Library.Notify
-
-local function EnsureScale(obj, defaultScale)
-	local scale = obj:FindFirstChildOfClass("UIScale")
-	if not scale then
-		scale = New("UIScale", {Parent = obj, Scale = defaultScale or 1})
-	elseif defaultScale and scale.Scale == 0 then
-		scale.Scale = defaultScale
-	end
-	return scale
-end
-
-local function AnimateButton(button, idleColor, hoverColor)
-	local scale = EnsureScale(button, 1)
-	button.MouseEnter:Connect(function()
-		Tween(scale, {Scale = 1.015}, 0.09)
-		if hoverColor then
-			Tween(button, {BackgroundColor3 = hoverColor}, 0.09)
-		end
-	end)
-	button.MouseLeave:Connect(function()
-		Tween(scale, {Scale = 1}, 0.09)
-		if idleColor then
-			Tween(button, {BackgroundColor3 = idleColor}, 0.09)
-		end
-	end)
-	button.MouseButton1Down:Connect(function()
-		Tween(scale, {Scale = 0.985}, 0.05)
-	end)
-	button.MouseButton1Up:Connect(function()
-		Tween(scale, {Scale = 1.01}, 0.07)
-		task.delay(0.07, function()
-			if scale.Parent then
-				Tween(scale, {Scale = 1}, 0.07)
-			end
-		end)
-	end)
-	return scale
-end
-
-local function AddSoftGlow(parent, accent)
-	local glowOuter = New("Frame", {
-		Parent = parent,
-		Name = "GlowOuter",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0.5, 0, 0.5, 0),
-		Size = UDim2.new(1, 18, 1, 18),
-		BackgroundColor3 = accent,
-		BackgroundTransparency = 0.93,
-		BorderSizePixel = 0,
-		ZIndex = 0
-	})
-	local glowInner = New("Frame", {
-		Parent = parent,
-		Name = "GlowInner",
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0.5, 0, 0.5, 0),
-		Size = UDim2.new(1, 8, 1, 8),
-		BackgroundColor3 = accent,
-		BackgroundTransparency = 0.88,
-		BorderSizePixel = 0,
-		ZIndex = 0
-	})
-	New("UICorner", {Parent = glowOuter, CornerRadius = UDim.new(0, 2)})
-	New("UICorner", {Parent = glowInner, CornerRadius = UDim.new(0, 2)})
-	return glowOuter, glowInner
-end
-
-local function AddReflection(parent, zi)
-	local reflect = New("Frame", {
-		Parent = parent,
-		Size = UDim2.new(1, 0, 0.55, 0),
-		Position = UDim2.fromOffset(0, 0),
-		BackgroundColor3 = Color3.new(1, 1, 1),
-		BackgroundTransparency = 0,
-		BorderSizePixel = 0,
-		ZIndex = (zi or 2) + 1,
-		ClipsDescendants = false
-	})
-	New("UIGradient", {
-		Parent = reflect,
-		Rotation = 90,
-		Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0,   0.80),
-			NumberSequenceKeypoint.new(0.5, 0.93),
-			NumberSequenceKeypoint.new(1,   1.00)
-		})
-	})
-	return reflect
-end
 
 local function BindTheme(obj, prop, themeKey)
 	Library.ThemeObjects[themeKey] = Library.ThemeObjects[themeKey] or {}
@@ -359,6 +278,14 @@ function Library:Unload()
 	getgenv().Library = nil
 end
 
+local function EnumLookup(enum, name)
+	local ok, v = pcall(function()
+		return enum[name]
+	end)
+	if ok then return v end
+	return nil
+end
+
 local function SerializeConfigValue(value)
 	local valueType = typeof(value)
 	if valueType == "Color3" then
@@ -382,8 +309,12 @@ local function DeserializeConfigValue(value)
 	end
 	if value.__type == "Color3" then
 		return Color3.new(tonumber(value.R) or 1, tonumber(value.G) or 1, tonumber(value.B) or 1)
-	elseif value.__type == "EnumItem" and value.EnumType == "Enum.KeyCode" and value.Name then
-		return Enum.KeyCode[value.Name]
+	elseif value.__type == "EnumItem" and value.Name then
+		if value.EnumType == "Enum.KeyCode" then
+			return EnumLookup(Enum.KeyCode, value.Name)
+		elseif value.EnumType == "Enum.UserInputType" then
+			return EnumLookup(Enum.UserInputType, value.Name)
+		end
 	end
 	local copy = {}
 	for k, v in pairs(value) do
@@ -531,14 +462,17 @@ function Library:LoadConfig(name)
 					bind.Mode = savedBind.Mode
 				end
 				bind.State = savedBind.State and true or false
-				if savedBind.Key and Enum.KeyCode[savedBind.Key] then
-					local item = self.Items[flag]
-					if item and item.Set then
-						pcall(function()
-							item:Set(Enum.KeyCode[savedBind.Key])
-						end)
-					else
-						bind.Key = Enum.KeyCode[savedBind.Key]
+				if savedBind.Key then
+					local savedKey = EnumLookup(Enum.KeyCode, savedBind.Key) or EnumLookup(Enum.UserInputType, savedBind.Key)
+					if savedKey then
+						local item = self.Items[flag]
+						if item and item.Set then
+							pcall(function()
+								item:Set(savedKey)
+							end)
+						else
+							bind.Key = savedKey
+						end
 					end
 				end
 			end
@@ -579,28 +513,38 @@ local function Stroke(parent, color, thickness, bindKey)
 	return stroke
 end
 
-local function ApplyControlGradient(target)
-	target.BackgroundColor3 = Library.Theme.ControlTop
-	local gradient = target:FindFirstChild("ControlGradient")
-	if not gradient then
-		gradient = New("UIGradient", {
-			Name = "ControlGradient",
-			Parent = target,
-			Rotation = 90
-		})
-	end
+-- lighter-than-section box used by buttons, sliders, dropdowns, textboxes
+local function ControlBox(parent, size, position)
+	local frame = New("Frame", {
+		Parent = parent,
+		Size = size,
+		Position = position or UDim2.new(),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		BorderSizePixel = 0,
+		ZIndex = 1
+	})
+	local gradient = New("UIGradient", {Parent = frame, Rotation = 90})
 	local function updateGradient()
-		if gradient and gradient.Parent then
-			gradient.Color = ColorSequence.new({
-				ColorSequenceKeypoint.new(0, Library.Theme.ControlTop),
-				ColorSequenceKeypoint.new(1, Library.Theme.ControlBottom)
-			})
+		if gradient.Parent then
+			gradient.Color = ColorSequence.new(Library.Theme.ControlTop, Library.Theme.ControlBottom)
 		end
 	end
-	BindTheme(target, "BackgroundColor3", "ControlTop")
 	BindThemeUpdater({"ControlTop", "ControlBottom"}, updateGradient)
 	updateGradient()
-	return gradient
+	Stroke(frame, Library.Theme.Outline2, 1, "Outline2")
+
+	local overlay = New("Frame", {
+		Parent = frame,
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ZIndex = 2
+	})
+	local function hover(state)
+		Tween(overlay, {BackgroundTransparency = state and 0.93 or 1}, 0.08)
+	end
+	return frame, hover
 end
 
 local function MakeDraggable(frame, drag)
@@ -632,15 +576,6 @@ local function MakeDraggable(frame, drag)
 	end)
 end
 
-local function Hex(color)
-	return string.format(
-		"#%02X%02X%02X",
-		math.floor(color.R * 255 + 0.5),
-		math.floor(color.G * 255 + 0.5),
-		math.floor(color.B * 255 + 0.5)
-	)
-end
-
 local function ColorFromHex(hex)
 	hex = tostring(hex or ""):gsub("#", "")
 	if #hex ~= 6 then return nil end
@@ -662,19 +597,11 @@ local function KeyFromValue(value)
 	if keyName == "" or keyName == "nil" or keyName == "None" or keyName == "Unbound" then
 		return nil
 	end
-	return Enum.KeyCode[keyName] or Enum.UserInputType[keyName]
-end
-
-local function LerpColor(color1, color2, t)
-	return Color3.new(
-		color1.R + (color2.R - color1.R) * t,
-		color1.G + (color2.G - color1.G) * t,
-		color1.B + (color2.B - color1.B) * t
-	)
+	return EnumLookup(Enum.KeyCode, keyName) or EnumLookup(Enum.UserInputType, keyName)
 end
 
 function Library:RefreshKeybinds()
-	if not self.KeybindBox or not self.KeybindInner then return end
+	if not self.KeybindBox then return end
 
 	for _, row in ipairs(self.KeybindRows or {}) do
 		if row and row.Parent then
@@ -686,55 +613,45 @@ function Library:RefreshKeybinds()
 	local entries = {}
 	for _, bind in pairs(self.Keybinds) do
 		if bind.Key and string.lower(bind.Name) ~= "menu" then
-			local keyName = bind.Key.Name:lower()
 			table.insert(entries, {
-				Text = string.lower(bind.Name),
+				Text = bind.Name,
 				Mode = string.lower(bind.Mode or "toggle"),
-				Key = keyName,
+				Key = bind.Key.Name:lower(),
 				Active = bind.State and true or false
 			})
 		end
 	end
 	table.sort(entries, function(a, b)
-		return (a.Text .. a.Key .. (a.Mode or "")) < (b.Text .. b.Key .. (b.Mode or ""))
+		return (a.Text .. a.Key .. a.Mode) < (b.Text .. b.Key .. b.Mode)
 	end)
 
 	if #entries == 0 then
-		table.insert(entries, {Text = "no keybinds", Key = "", Active = false})
+		table.insert(entries, {Text = "no keybinds", Key = "", Mode = "", Active = false})
 	end
 
-	local longest = 0
-	local rowStartY = 22
-	local rowHeight = 12
+	local startY = 25
+	local rowHeight = 14
+	local widest = TextWidth("Keybinds")
 	for i, entry in ipairs(entries) do
-		local rowText = entry.Key ~= "" and (entry.Text .. " : " .. entry.Key .. " : " .. (entry.Mode or "")) or entry.Text
-		longest = math.max(longest, #rowText)
+		local rowText = entry.Key ~= "" and (entry.Text .. " : " .. entry.Key .. " : " .. entry.Mode) or entry.Text
+		widest = math.max(widest, TextWidth(rowText))
 		local row = New("TextLabel", {
-			Parent = self.KeybindInner,
+			Parent = self.KeybindBox,
 			BackgroundTransparency = 1,
-			Position = UDim2.fromOffset(8, rowStartY + ((i - 1) * rowHeight)),
+			Position = UDim2.fromOffset(8, startY + ((i - 1) * rowHeight)),
 			Size = UDim2.new(1, -16, 0, rowHeight),
 			Text = rowText,
-			Font = Enum.Font.Code,
-			TextSize = 10,
 			TextColor3 = entry.Active and Library.Theme.Accent or Library.Theme.Faint,
 			TextXAlignment = Enum.TextXAlignment.Left,
-			TextYAlignment = Enum.TextYAlignment.Top,
-			TextTruncate = Enum.TextTruncate.AtEnd
+			TextYAlignment = Enum.TextYAlignment.Center,
+			ZIndex = 3
 		})
 		table.insert(self.KeybindRows, row)
 	end
 
-	local lineCount = math.max(#entries, 1)
-	local innerHeight = math.clamp(22 + (lineCount * rowHeight) + 6, 34, 110)
-	local totalHeight = innerHeight + 12
-	local boxWidth = math.clamp(26 + (longest * 6), 116, 190)
-
-	self.KeybindBox.Size = UDim2.fromOffset(boxWidth, totalHeight)
-	self.KeybindInner.Size = UDim2.new(1, -12, 0, innerHeight)
-	if self.KeybindText then
-		self.KeybindText.Visible = false
-	end
+	local height = startY + (#entries * rowHeight) + 6
+	local width = math.clamp(widest + 22, 120, 240)
+	self.KeybindBox.Size = UDim2.fromOffset(width, height)
 end
 
 function Library:CreateWindow(options)
@@ -750,30 +667,51 @@ function Library:CreateWindow(options)
 	})
 	self.Gui = gui
 
-	local mainGlowLayers = {}
-	local mainGlowSettings = {}
-	local mainSize = options.Size or UDim2.fromOffset(560, 500)
+	local mainSize = options.Size or UDim2.fromOffset(620, 470)
 	local halfW = math.floor(mainSize.X.Offset / 2)
 	local halfH = math.floor(mainSize.Y.Offset / 2)
 	local openMainPos = UDim2.new(0.5, -halfW, 0.5, -halfH)
-	local closedMainPos = UDim2.new(0.5, -halfW, 0.5, -halfH + 12)
+	local closedMainPos = UDim2.new(0.5, -halfW, 0.5, -halfH + 10)
 
-	for i = 1, 50 do
-		local t = i / 50
-		local pad = math.floor(1 + t * 20)
-		local transparency = 0.968 + (t * 0.026)
-		local glow = New("Frame", {
-			Parent = gui,
-			Size = mainSize + UDim2.fromOffset(pad * 2, pad * 2),
-			Position = openMainPos - UDim2.fromOffset(pad, pad),
-			BackgroundColor3 = self.Theme.Accent,
-			BackgroundTransparency = transparency,
-			BorderSizePixel = 0,
-			ZIndex = 0
-		})
-		New("UICorner", {Parent = glow, CornerRadius = UDim.new(0, 2)})
-		mainGlowLayers[i] = glow
-		mainGlowSettings[i] = {Pad = pad, Transparency = transparency}
+	-- very light glow that follows a target frame
+	local function CreateAttachedGlow(target, layerCount, maxPad, startTransparency, transparencyRange)
+		local layers = {}
+		local settings = {}
+		for i = 1, layerCount do
+			local t = i / layerCount
+			local pad = math.max(1, math.floor(t * maxPad + 0.5))
+			local transparency = startTransparency + (t * transparencyRange)
+			local glow = New("Frame", {
+				Parent = gui,
+				AnchorPoint = target.AnchorPoint,
+				Size = target.Size + UDim2.fromOffset(pad * 2, pad * 2),
+				Position = target.Position,
+				BackgroundColor3 = self.Theme.Accent,
+				BackgroundTransparency = transparency,
+				BorderSizePixel = 0,
+				ZIndex = 0,
+				Visible = false
+			})
+			New("UICorner", {Parent = glow, CornerRadius = UDim.new(0, 3)})
+			BindTheme(glow, "BackgroundColor3", "Accent")
+			layers[i] = glow
+			settings[i] = {Pad = pad, Transparency = transparency}
+		end
+		local function sync()
+			local ax, ay = target.AnchorPoint.X, target.AnchorPoint.Y
+			for i, glow in ipairs(layers) do
+				local pad = settings[i].Pad
+				glow.AnchorPoint = target.AnchorPoint
+				glow.Position = target.Position + UDim2.fromOffset(pad * (2 * ax - 1), pad * (2 * ay - 1))
+				glow.Size = target.Size + UDim2.fromOffset(pad * 2, pad * 2)
+				glow.Visible = target.Visible
+			end
+		end
+		target:GetPropertyChangedSignal("Position"):Connect(sync)
+		target:GetPropertyChangedSignal("Size"):Connect(sync)
+		target:GetPropertyChangedSignal("Visible"):Connect(sync)
+		sync()
+		return {Sync = sync, Layers = layers, Settings = settings}
 	end
 
 	local main = New("Frame", {
@@ -786,445 +724,237 @@ function Library:CreateWindow(options)
 		ZIndex = 1
 	})
 	BindTheme(main, "BackgroundColor3", "Bg")
-	for _, glow in ipairs(mainGlowLayers) do
-		BindTheme(glow, "BackgroundColor3", "Accent")
-	end
-
-	local function SyncMainGlow()
-		local pos = main.Position
-		local size = main.Size
-		for i, glow in ipairs(mainGlowLayers) do
-			local settings = mainGlowSettings[i]
-			glow.Position = pos - UDim2.fromOffset(settings.Pad, settings.Pad)
-			glow.Size = size + UDim2.fromOffset(settings.Pad * 2, settings.Pad * 2)
-			glow.Visible = main.Visible
-		end
-	end
-
-	local function SetGlowVisibilityFactor(factor)
-		for i, glow in ipairs(mainGlowLayers) do
-			local base = mainGlowSettings[i].Transparency
-			glow.BackgroundTransparency = math.clamp(base + factor, 0, 1)
-		end
-	end
-
-	local function CreateAttachedGlow(target, layerCount, maxPad, startTransparency, transparencyRange)
-		local layers = {}
-		local settings = {}
-		for i = 1, layerCount do
-			local t = i / layerCount
-			local pad = math.floor(1 + t * maxPad)
-			local transparency = startTransparency + (t * transparencyRange)
-			local glow = New("Frame", {
-				Parent = gui,
-				Size = target.Size + UDim2.fromOffset(pad * 2, pad * 2),
-				Position = target.Position - UDim2.fromOffset(pad, pad),
-				BackgroundColor3 = self.Theme.Accent,
-				BackgroundTransparency = transparency,
-				BorderSizePixel = 0,
-				ZIndex = 0,
-				Visible = false
-			})
-			New("UICorner", {Parent = glow, CornerRadius = UDim.new(0, 2)})
-			BindTheme(glow, "BackgroundColor3", "Accent")
-			layers[i] = glow
-			settings[i] = {Pad = pad, Transparency = transparency}
-		end
-		local function sync()
-			local pos = target.Position
-			local size = target.Size
-			for i, glow in ipairs(layers) do
-				local info = settings[i]
-				glow.Position = pos - UDim2.fromOffset(info.Pad, info.Pad)
-				glow.Size = size + UDim2.fromOffset(info.Pad * 2, info.Pad * 2)
-				glow.Visible = target.Visible
-			end
-		end
-		local function setFactor(factor)
-			for i, glow in ipairs(layers) do
-				local base = settings[i].Transparency
-				glow.BackgroundTransparency = math.clamp(base + factor, 0, 1)
-			end
-		end
-		target:GetPropertyChangedSignal("Position"):Connect(sync)
-		target:GetPropertyChangedSignal("Size"):Connect(sync)
-		sync()
-		return {Sync = sync, SetFactor = setFactor, Layers = layers, Settings = settings}
-	end
-
-	local function ApplyAccentLineGradient(line, glow, wideGlow)
-		local lineGradient = New("UIGradient", {Parent = line, Rotation = 0})
-		local glowGradient = glow and New("UIGradient", {Parent = glow, Rotation = 0}) or nil
-		local wideGlowGradient = wideGlow and New("UIGradient", {Parent = wideGlow, Rotation = 0}) or nil
-		local function updateLineGradient()
-			local accent = Library.Theme.Accent
-			local bright = Color3.fromRGB(255, 248, 250)
-			local colors = ColorSequence.new({
-				ColorSequenceKeypoint.new(0.00, accent),
-				ColorSequenceKeypoint.new(0.18, Color3.fromRGB(244, 218, 226)),
-				ColorSequenceKeypoint.new(0.50, bright),
-				ColorSequenceKeypoint.new(0.82, Color3.fromRGB(244, 218, 226)),
-				ColorSequenceKeypoint.new(1.00, accent)
-			})
-			lineGradient.Color = colors
-			if glowGradient then
-				glowGradient.Color = colors
-				glowGradient.Transparency = NumberSequence.new({
-					NumberSequenceKeypoint.new(0.00, 0.88),
-					NumberSequenceKeypoint.new(0.18, 0.72),
-					NumberSequenceKeypoint.new(0.50, 0.12),
-					NumberSequenceKeypoint.new(0.82, 0.72),
-					NumberSequenceKeypoint.new(1.00, 0.88)
-				})
-			end
-			if wideGlowGradient then
-				wideGlowGradient.Color = colors
-				wideGlowGradient.Transparency = NumberSequence.new({
-					NumberSequenceKeypoint.new(0.00, 0.97),
-					NumberSequenceKeypoint.new(0.18, 0.93),
-					NumberSequenceKeypoint.new(0.50, 0.72),
-					NumberSequenceKeypoint.new(0.82, 0.93),
-					NumberSequenceKeypoint.new(1.00, 0.97)
-				})
-			end
-		end
-		BindThemeUpdater({"Accent"}, updateLineGradient)
-		updateLineGradient()
-	end
-
 	local mainScale = New("UIScale", {Parent = main, Scale = 1})
-	Stroke(main, self.Theme.Outline, 1, "Outline")
+	Stroke(main, self.Theme.Border, 1, "Border")
+	local mainGlow = CreateAttachedGlow(main, 10, 9, 0.986, 0.010)
 
+	-- top bar
 	local top = New("Frame", {
 		Parent = main,
-		Size = UDim2.new(1, 0, 0, 26),
+		Size = UDim2.new(1, 0, 0, 30),
 		BackgroundColor3 = self.Theme.Bg2,
 		BorderSizePixel = 0
 	})
 	BindTheme(top, "BackgroundColor3", "Bg2")
-	Stroke(top, self.Theme.Outline2, 1, "Outline2")
 
-	local topBottomLine = New("Frame", {
-		Parent = top,
-		AnchorPoint = Vector2.new(0, 1),
-		Position = UDim2.new(0, 1, 1, 0),
-		Size = UDim2.new(1, -2, 0, 2),
-		BackgroundColor3 = self.Theme.Accent,
+	local topLine = New("Frame", {
+		Parent = main,
+		Position = UDim2.fromOffset(0, 30),
+		Size = UDim2.new(1, 0, 0, 2),
+		BackgroundColor3 = Color3.new(1, 1, 1),
 		BorderSizePixel = 0,
-		BackgroundTransparency = 0.04
+		ZIndex = 2
 	})
-	BindTheme(topBottomLine, "BackgroundColor3", "Accent")
+	local topLineGradient = New("UIGradient", {Parent = topLine, Rotation = 0})
 
-	local topBottomLineGlow = New("Frame", {
-		Parent = top,
-		AnchorPoint = Vector2.new(0, 1),
-		Position = UDim2.new(0, 1, 1, 2),
-		Size = UDim2.new(1, -2, 0, 6),
-		BackgroundColor3 = self.Theme.Accent,
-		BackgroundTransparency = 0.90,
-		BorderSizePixel = 0
+	local topGlow = New("Frame", {
+		Parent = main,
+		Position = UDim2.fromOffset(0, 32),
+		Size = UDim2.new(1, 0, 0, 5),
+		BackgroundColor3 = Color3.new(1, 1, 1),
+		BorderSizePixel = 0,
+		ZIndex = 2
 	})
-	BindTheme(topBottomLineGlow, "BackgroundColor3", "Accent")
+	local topGlowGradient = New("UIGradient", {Parent = topGlow, Rotation = 0})
 
-	local topBottomLineGlowWide = New("Frame", {
-		Parent = top,
-		AnchorPoint = Vector2.new(0, 1),
-		Position = UDim2.new(0, 1, 1, 4),
-		Size = UDim2.new(1, -2, 0, 12),
-		BackgroundColor3 = self.Theme.Accent,
-		BackgroundTransparency = 0.96,
-		BorderSizePixel = 0
-	})
-	BindTheme(topBottomLineGlowWide, "BackgroundColor3", "Accent")
-
-	local topBottomLineGradient = New("UIGradient", {
-		Parent = topBottomLine,
-		Rotation = 0
-	})
-	local topBottomLineGlowGradient = New("UIGradient", {
-		Parent = topBottomLineGlow,
-		Rotation = 0
-	})
-	local topBottomLineGlowWideGradient = New("UIGradient", {
-		Parent = topBottomLineGlowWide,
-		Rotation = 0
-	})
-	local function updateTopLineGradient()
-		local accent = Library.Theme.Accent
-		local bright = Color3.fromRGB(255, 248, 250)
-		topBottomLineGradient.Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0.00, accent),
-			ColorSequenceKeypoint.new(0.18, Color3.fromRGB(244, 218, 226)),
-			ColorSequenceKeypoint.new(0.50, bright),
-			ColorSequenceKeypoint.new(0.82, Color3.fromRGB(244, 218, 226)),
-			ColorSequenceKeypoint.new(1.00, accent)
+	local function updateTopLine()
+		local line = Library.Theme.Line
+		local edge = line:Lerp(Library.Theme.Bg, 0.72)
+		topLineGradient.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0.00, edge),
+			ColorSequenceKeypoint.new(0.50, line),
+			ColorSequenceKeypoint.new(1.00, edge)
 		})
-		topBottomLineGlowGradient.Color = topBottomLineGradient.Color
-		topBottomLineGlowWideGradient.Color = topBottomLineGradient.Color
-		topBottomLineGlowGradient.Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0.00, 0.88),
-			NumberSequenceKeypoint.new(0.18, 0.72),
-			NumberSequenceKeypoint.new(0.50, 0.12),
-			NumberSequenceKeypoint.new(0.82, 0.72),
-			NumberSequenceKeypoint.new(1.00, 0.88)
-		})
-		topBottomLineGlowWideGradient.Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0.00, 0.97),
-			NumberSequenceKeypoint.new(0.18, 0.93),
-			NumberSequenceKeypoint.new(0.50, 0.72),
-			NumberSequenceKeypoint.new(0.82, 0.93),
-			NumberSequenceKeypoint.new(1.00, 0.97)
+		topGlowGradient.Color = ColorSequence.new(line, line)
+		topGlowGradient.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0.00, 1.00),
+			NumberSequenceKeypoint.new(0.50, 0.93),
+			NumberSequenceKeypoint.new(1.00, 1.00)
 		})
 	end
-	BindThemeUpdater({"Accent"}, updateTopLineGradient)
-	updateTopLineGradient()
+	BindThemeUpdater({"Line", "Bg"}, updateTopLine)
+	updateTopLine()
 
-	local titleText = options.Title or "junt.hax.club"
+	-- title (+ optional logo)
+	local titleText = tostring(options.Title or "junt.hax.club")
 	local logoImage = options.Logo or options.LogoImage or nil
 	local logoSize = options.LogoSize or 18
-	
-	-- GitHub image loader
+
 	local function LoadGithubImage(url)
 		if type(url) ~= "string" or not url:match("^https?://") then
 			return url
 		end
-	
-		-- Convert normal GitHub blob URL to raw URL
+
 		url = url:gsub(
 			"https://github%.com/([^/]+/[^/]+)/blob/([^/]+)/(.+)",
 			"https://raw.githubusercontent.com/%1/%2/%3"
 		)
-	
+
 		local filename = "junt_ui/github_logo.png"
-	
+
 		local success, data = pcall(function()
 			return game:HttpGet(url)
 		end)
-	
+
 		if not success or type(data) ~= "string" or #data == 0 then
 			warn("junt_ui: failed to download image: " .. url)
 			return nil
 		end
-	
+
 		if writefile then
 			pcall(function()
 				if makefolder and (not isfolder or not isfolder("junt_ui")) then
 					makefolder("junt_ui")
 				end
-	
 				writefile(filename, data)
 			end)
 		end
-	
-		-- Convert the downloaded file into an image asset
+
 		if getcustomasset then
 			local ok, asset = pcall(function()
 				return getcustomasset(filename)
 			end)
-	
 			if ok then
 				return asset
 			end
 		end
-	
+
 		if getsynasset then
 			local ok, asset = pcall(function()
 				return getsynasset(filename)
 			end)
-	
 			if ok then
 				return asset
 			end
 		end
-	
+
 		return nil
 	end
-	
-	-- Load GitHub logo if a URL was supplied
+
 	if type(logoImage) == "string" and logoImage:match("^https?://") then
 		logoImage = LoadGithubImage(logoImage)
 	end
-	
+
 	local titleContainer = New("Frame", {
 		Parent = top,
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(7, 0),
-		Size = UDim2.fromOffset(300, 26)
+		Position = UDim2.fromOffset(12, 0),
+		Size = UDim2.fromOffset(340, 30)
 	})
-	
-	local currentLogoX = 0
-	
-	-- Add logo if provided
+
+	local cursorX = 0
 	if logoImage then
-		local logo = New("ImageLabel", {
+		New("ImageLabel", {
 			Parent = titleContainer,
 			BackgroundTransparency = 1,
-			Position = UDim2.fromOffset(0, 4),
+			Position = UDim2.fromOffset(0, math.floor((30 - logoSize) / 2)),
 			Size = UDim2.fromOffset(logoSize, logoSize),
 			Image = logoImage,
 			ScaleType = Enum.ScaleType.Fit
 		})
-	
-		currentLogoX = logoSize + 4
+		cursorX = logoSize + 6
 	end
-	
-	-- Gradient title with per-character coloring
-	local white = Color3.fromRGB(255, 255, 255)
-	local titleLabels = {}
-	
-	local function updateTitleGradient()
-		local titleLength = #titleText
-		local accentColor = Library.Theme.Accent
-	
-		for i, label in ipairs(titleLabels) do
-			if label and label.Parent then
-				local progress = (i - 1) / math.max(titleLength - 1, 1)
-				local charColor = LerpColor(white, accentColor, progress)
-				label.TextColor3 = charColor
-			end
-		end
-	end
-	
+
+	-- spaced out title like the reference
+	local letterSpacing = 2
 	for i = 1, #titleText do
 		local char = titleText:sub(i, i)
-	
+		local w = TextWidth(char)
 		local label = New("TextLabel", {
 			Parent = titleContainer,
 			BackgroundTransparency = 1,
-			Position = UDim2.fromOffset(
-				currentLogoX + (i - 1) * 6,
-				0
-			),
-			Size = UDim2.fromOffset(6, 26),
+			Position = UDim2.fromOffset(cursorX, 0),
+			Size = UDim2.fromOffset(w + 2, 30),
 			Text = char,
-			Font = Enum.Font.Code,
-			TextSize = 10,
-			TextColor3 = white,
-			TextXAlignment = Enum.TextXAlignment.Center,
+			TextColor3 = Library.Theme.Text,
+			TextXAlignment = Enum.TextXAlignment.Left,
 			TextYAlignment = Enum.TextYAlignment.Center
 		})
-	
-		table.insert(titleLabels, label)
+		BindTheme(label, "TextColor3", "Text")
+		cursorX = cursorX + w + letterSpacing
 	end
-	
-	BindThemeUpdater({"Accent"}, updateTitleGradient)
-	updateTitleGradient()
 
 	local tabHolder = New("Frame", {
 		Parent = top,
 		BackgroundTransparency = 1,
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -7, 0, 0),
-		Size = UDim2.new(0.7, -7, 1, 0)
+		Position = UDim2.new(1, -12, 0, 0),
+		Size = UDim2.new(0.7, -12, 1, 0)
 	})
-
 	New("UIListLayout", {
 		Parent = tabHolder,
 		FillDirection = Enum.FillDirection.Horizontal,
 		HorizontalAlignment = Enum.HorizontalAlignment.Right,
 		VerticalAlignment = Enum.VerticalAlignment.Center,
 		SortOrder = Enum.SortOrder.LayoutOrder,
-		Padding = UDim.new(0, 6)
+		Padding = UDim.new(0, 9)
 	})
-
-	local contentPanel = New("Frame", {
-		Parent = main,
-		BackgroundColor3 = self.Theme.Bg,
-		BorderSizePixel = 0,
-		Position = UDim2.fromOffset(6, 29),
-		Size = UDim2.new(1, -12, 1, -35)
-	})
-	BindTheme(contentPanel, "BackgroundColor3", "Bg")
-	Stroke(contentPanel, self.Theme.Outline, 1, "Outline")
 
 	local content = New("Frame", {
-		Parent = contentPanel,
+		Parent = main,
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(6, 6),
-		Size = UDim2.new(1, -12, 1, -12)
+		Position = UDim2.fromOffset(12, 34),
+		Size = UDim2.new(1, -24, 1, -46)
 	})
 
+	-- watermark
 	local watermarkBaseX = 194
-	local watermarkShownY = -50
-	local watermarkHiddenY = -44
+	local watermarkShownY = -34
+	local watermarkHiddenY = -28
 	local watermarkShownPos = UDim2.new(0, watermarkBaseX, 1, watermarkShownY)
 	local watermarkHiddenPos = UDim2.new(0, watermarkBaseX, 1, watermarkHiddenY)
 	local watermark = New("Frame", {
 		Parent = gui,
-		Size = UDim2.fromOffset(250, 34),
+		Size = UDim2.fromOffset(250, 22),
 		Position = watermarkShownPos,
-		BackgroundColor3 = self.Theme.Bg2,
+		BackgroundColor3 = self.Theme.Bg,
 		BorderSizePixel = 0,
 		Visible = false,
 		ClipsDescendants = true
 	})
-	BindTheme(watermark, "BackgroundColor3", "Bg2")
+	BindTheme(watermark, "BackgroundColor3", "Bg")
 	local watermarkScale = New("UIScale", {Parent = watermark, Scale = 1})
-	Stroke(watermark, self.Theme.Outline, 1, "Outline")
-
-	local watermarkInner = New("Frame", {
-		Parent = watermark,
-		Position = UDim2.fromOffset(6, 6),
-		Size = UDim2.new(1, -12, 1, -12),
-		BackgroundColor3 = self.Theme.Bg,
-		BorderSizePixel = 0,
-		ClipsDescendants = true
-	})
-	BindTheme(watermarkInner, "BackgroundColor3", "Bg")
-	Stroke(watermarkInner, self.Theme.Outline2, 1, "Outline2")
+	Stroke(watermark, self.Theme.Border, 1, "Border")
 
 	local watermarkLine = New("Frame", {
-		Parent = watermarkInner,
-		Position = UDim2.fromOffset(1, 1),
-		Size = UDim2.new(1, -2, 0, 2),
-		BackgroundColor3 = self.Theme.Accent,
+		Parent = watermark,
+		Size = UDim2.new(1, 0, 0, 1),
+		BackgroundColor3 = Color3.new(1, 1, 1),
 		BorderSizePixel = 0,
-		BackgroundTransparency = 0.04
+		ZIndex = 2
 	})
-	BindTheme(watermarkLine, "BackgroundColor3", "Accent")
-
-	local watermarkLineGlow = New("Frame", {
-		Parent = watermarkInner,
-		Position = UDim2.fromOffset(1, 2),
-		Size = UDim2.new(1, -2, 0, 6),
-		BackgroundColor3 = self.Theme.Accent,
-		BackgroundTransparency = 0.90,
-		BorderSizePixel = 0
-	})
-	BindTheme(watermarkLineGlow, "BackgroundColor3", "Accent")
-
-	local watermarkLineGlowWide = New("Frame", {
-		Parent = watermarkInner,
-		Position = UDim2.fromOffset(1, 4),
-		Size = UDim2.new(1, -2, 0, 12),
-		BackgroundColor3 = self.Theme.Accent,
-		BackgroundTransparency = 0.96,
-		BorderSizePixel = 0
-	})
-	BindTheme(watermarkLineGlowWide, "BackgroundColor3", "Accent")
-	ApplyAccentLineGradient(watermarkLine, watermarkLineGlow, watermarkLineGlowWide)
+	local watermarkLineGradient = New("UIGradient", {Parent = watermarkLine})
+	local function updateWatermarkLine()
+		local line = Library.Theme.Line
+		local edge = line:Lerp(Library.Theme.Bg, 0.72)
+		watermarkLineGradient.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, edge),
+			ColorSequenceKeypoint.new(0.5, line),
+			ColorSequenceKeypoint.new(1, edge)
+		})
+	end
+	BindThemeUpdater({"Line", "Bg"}, updateWatermarkLine)
+	updateWatermarkLine()
 
 	local watermarkText = New("TextLabel", {
-		Parent = watermarkInner,
+		Parent = watermark,
 		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(8, 2),
-		Size = UDim2.new(1, -16, 1, -4),
+		Position = UDim2.fromOffset(8, 1),
+		Size = UDim2.new(1, -16, 1, -1),
 		Text = "",
-		Font = Enum.Font.Code,
-		TextSize = 10,
 		TextColor3 = self.Theme.Text,
 		TextXAlignment = Enum.TextXAlignment.Left,
-		TextTruncate = Enum.TextTruncate.None
+		ZIndex = 3
 	})
 	BindTheme(watermarkText, "TextColor3", "Text")
-	local watermarkGlow = CreateAttachedGlow(watermark, 26, 14, 0.972, 0.022)
+	local watermarkGlow = CreateAttachedGlow(watermark, 6, 6, 0.99, 0.006)
 
 	local function updateWatermarkBounds()
 		local camera = workspace.CurrentCamera
 		local viewport = camera and camera.ViewportSize or Vector2.new(1920, 1080)
-		local desiredWidth = math.max(210, watermarkText.TextBounds.X + 22)
-		desiredWidth = math.min(desiredWidth, math.max(210, viewport.X - 16))
-		watermark.Size = UDim2.fromOffset(desiredWidth, 34)
+		local desiredWidth = math.max(150, watermarkText.TextBounds.X + 20)
+		desiredWidth = math.min(desiredWidth, math.max(150, viewport.X - 16))
+		watermark.Size = UDim2.fromOffset(desiredWidth, 22)
 
 		local shownX = math.min(watermarkBaseX, math.max(8, viewport.X - desiredWidth - 8))
 		watermarkShownPos = UDim2.new(0, shownX, 1, watermarkShownY)
@@ -1234,105 +964,66 @@ function Library:CreateWindow(options)
 		end
 	end
 
-	local keybindShownPos = UDim2.new(0, 8, 1, -114)
-	local keybindHiddenPos = UDim2.new(0, 8, 1, -108)
+	-- keybind list
+	local keybindShownPos = UDim2.new(0, 8, 1, -10)
+	local keybindHiddenPos = UDim2.new(0, 8, 1, -4)
 	local keybindBox = New("Frame", {
 		Parent = gui,
-		Size = UDim2.fromOffset(132, 54),
+		AnchorPoint = Vector2.new(0, 1),
+		Size = UDim2.fromOffset(132, 40),
 		Position = keybindShownPos,
-		BackgroundColor3 = self.Theme.Bg2,
+		BackgroundColor3 = self.Theme.Bg,
 		BorderSizePixel = 0,
 		Visible = false,
 		ClipsDescendants = true
 	})
-	BindTheme(keybindBox, "BackgroundColor3", "Bg2")
+	BindTheme(keybindBox, "BackgroundColor3", "Bg")
 	local keybindScale = New("UIScale", {Parent = keybindBox, Scale = 1})
-	Stroke(keybindBox, self.Theme.Outline, 1, "Outline")
-
-	local keybindInner = New("Frame", {
-		Parent = keybindBox,
-		Position = UDim2.fromOffset(6, 6),
-		Size = UDim2.new(1, -12, 0, 42),
-		BackgroundColor3 = self.Theme.Bg,
-		BorderSizePixel = 0,
-		ClipsDescendants = true
-	})
-	BindTheme(keybindInner, "BackgroundColor3", "Bg")
-	Stroke(keybindInner, self.Theme.Outline2, 1, "Outline2")
+	Stroke(keybindBox, self.Theme.Border, 1, "Border")
 
 	local keybindHeader = New("TextLabel", {
-		Parent = keybindInner,
+		Parent = keybindBox,
 		BackgroundTransparency = 1,
 		Position = UDim2.fromOffset(8, 4),
-		Size = UDim2.new(1, -16, 0, 10),
-		Text = "keybinds",
-		Font = Enum.Font.Code,
-		TextSize = 10,
+		Size = UDim2.new(1, -16, 0, 14),
+		Text = "Keybinds",
 		TextColor3 = self.Theme.Text,
 		TextXAlignment = Enum.TextXAlignment.Left,
-		TextYAlignment = Enum.TextYAlignment.Top
+		ZIndex = 3
 	})
 	BindTheme(keybindHeader, "TextColor3", "Text")
 
 	local keybindLine = New("Frame", {
-		Parent = keybindInner,
-		Position = UDim2.fromOffset(8, 16),
-		Size = UDim2.new(1, -16, 0, 2),
-		BackgroundColor3 = self.Theme.Accent,
+		Parent = keybindBox,
+		Position = UDim2.fromOffset(0, 20),
+		Size = UDim2.new(1, 0, 0, 1),
+		BackgroundColor3 = Color3.new(1, 1, 1),
 		BorderSizePixel = 0,
-		BackgroundTransparency = 0.04
+		ZIndex = 2
 	})
-	BindTheme(keybindLine, "BackgroundColor3", "Accent")
+	local keybindLineGradient = New("UIGradient", {Parent = keybindLine})
+	local function updateKeybindLine()
+		local line = Library.Theme.Line
+		local edge = line:Lerp(Library.Theme.Bg, 0.72)
+		keybindLineGradient.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, edge),
+			ColorSequenceKeypoint.new(0.5, line),
+			ColorSequenceKeypoint.new(1, edge)
+		})
+	end
+	BindThemeUpdater({"Line", "Bg"}, updateKeybindLine)
+	updateKeybindLine()
 
-	local keybindLineGlow = New("Frame", {
-		Parent = keybindInner,
-		Position = UDim2.fromOffset(8, 17),
-		Size = UDim2.new(1, -16, 0, 6),
-		BackgroundColor3 = self.Theme.Accent,
-		BackgroundTransparency = 0.90,
-		BorderSizePixel = 0
-	})
-	BindTheme(keybindLineGlow, "BackgroundColor3", "Accent")
-
-	local keybindLineGlowWide = New("Frame", {
-		Parent = keybindInner,
-		Position = UDim2.fromOffset(8, 19),
-		Size = UDim2.new(1, -16, 0, 12),
-		BackgroundColor3 = self.Theme.Accent,
-		BackgroundTransparency = 0.96,
-		BorderSizePixel = 0
-	})
-	BindTheme(keybindLineGlowWide, "BackgroundColor3", "Accent")
-	ApplyAccentLineGradient(keybindLine, keybindLineGlow, keybindLineGlowWide)
-
-	local keybindText = New("TextLabel", {
-		Parent = keybindInner,
-		BackgroundTransparency = 1,
-		Position = UDim2.fromOffset(8, 4),
-		Size = UDim2.new(1, -16, 1, -8),
-		Text = "",
-		Font = Enum.Font.Code,
-		TextSize = 10,
-		TextColor3 = self.Theme.Dim,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextYAlignment = Enum.TextYAlignment.Top,
-		TextTruncate = Enum.TextTruncate.AtEnd
-	})
-	BindTheme(keybindText, "TextColor3", "Dim")
-	local keybindGlow = CreateAttachedGlow(keybindBox, 22, 12, 0.975, 0.02)
+	local keybindGlow = CreateAttachedGlow(keybindBox, 6, 6, 0.99, 0.006)
 
 	MakeDraggable(main, top)
 	MakeDraggable(watermark, watermark)
 	MakeDraggable(keybindBox, keybindBox)
 
-	main:GetPropertyChangedSignal("Position"):Connect(SyncMainGlow)
-	main:GetPropertyChangedSignal("Size"):Connect(SyncMainGlow)
-	SyncMainGlow()
-
-	self.KeybindText = keybindText
 	self.KeybindBox = keybindBox
-	self.KeybindInner = keybindInner
+	self.KeybindInner = keybindBox
 	self.KeybindRows = {}
+	self:RefreshKeybinds()
 
 	local window = {
 		Gui = gui,
@@ -1348,27 +1039,20 @@ function Library:CreateWindow(options)
 		if state then
 			main.Visible = true
 			main.Position = closedMainPos
-			mainScale.Scale = 0.975
-			SetGlowVisibilityFactor(0.006)
-			SyncMainGlow()
+			mainScale.Scale = 0.98
 			Tween(mainScale, {Scale = 1}, 0.16)
 			Tween(main, {Position = openMainPos}, 0.16)
-			for i, glow in ipairs(mainGlowLayers) do
-				Tween(glow, {BackgroundTransparency = mainGlowSettings[i].Transparency}, 0.16)
-			end
 		else
-			Tween(mainScale, {Scale = 0.975}, 0.14)
-			Tween(main, {Position = closedMainPos}, 0.14)
-			for i, glow in ipairs(mainGlowLayers) do
-				Tween(glow, {BackgroundTransparency = math.clamp(mainGlowSettings[i].Transparency + 0.006, 0, 1)}, 0.14)
+			if Library.ActiveFloatingColorPicker then
+				Library.ActiveFloatingColorPicker:SetOpen(false)
 			end
+			Tween(mainScale, {Scale = 0.98}, 0.14)
+			Tween(main, {Position = closedMainPos}, 0.14)
 			task.delay(0.15, function()
 				if not Library.Open then
 					main.Visible = false
 					mainScale.Scale = 1
 					main.Position = openMainPos
-					SetGlowVisibilityFactor(0)
-					SyncMainGlow()
 				end
 			end)
 		end
@@ -1379,26 +1063,16 @@ function Library:CreateWindow(options)
 			watermark.Visible = true
 			watermark.Position = watermarkHiddenPos
 			watermarkScale.Scale = 0.96
-			watermarkGlow.SetFactor(0.01)
-			watermarkGlow.Sync()
 			Tween(watermarkScale, {Scale = 1}, 0.14)
 			Tween(watermark, {Position = watermarkShownPos}, 0.14)
-			for i, glow in ipairs(watermarkGlow.Layers) do
-				Tween(glow, {BackgroundTransparency = watermarkGlow.Settings[i].Transparency}, 0.14)
-			end
 		else
 			Tween(watermarkScale, {Scale = 0.96}, 0.12)
 			Tween(watermark, {Position = watermarkHiddenPos}, 0.12)
-			for i, glow in ipairs(watermarkGlow.Layers) do
-				Tween(glow, {BackgroundTransparency = math.clamp(watermarkGlow.Settings[i].Transparency + 0.01, 0, 1)}, 0.12)
-			end
 			task.delay(0.13, function()
 				if watermark.Parent then
 					watermark.Visible = false
 					watermarkScale.Scale = 1
 					watermark.Position = watermarkShownPos
-					watermarkGlow.SetFactor(0)
-					watermarkGlow.Sync()
 				end
 			end)
 		end
@@ -1409,26 +1083,16 @@ function Library:CreateWindow(options)
 			keybindBox.Visible = true
 			keybindBox.Position = keybindHiddenPos
 			keybindScale.Scale = 0.96
-			keybindGlow.SetFactor(0.01)
-			keybindGlow.Sync()
 			Tween(keybindScale, {Scale = 1}, 0.14)
 			Tween(keybindBox, {Position = keybindShownPos}, 0.14)
-			for i, glow in ipairs(keybindGlow.Layers) do
-				Tween(glow, {BackgroundTransparency = keybindGlow.Settings[i].Transparency}, 0.14)
-			end
 		else
 			Tween(keybindScale, {Scale = 0.96}, 0.12)
 			Tween(keybindBox, {Position = keybindHiddenPos}, 0.12)
-			for i, glow in ipairs(keybindGlow.Layers) do
-				Tween(glow, {BackgroundTransparency = math.clamp(keybindGlow.Settings[i].Transparency + 0.01, 0, 1)}, 0.12)
-			end
 			task.delay(0.13, function()
 				if keybindBox.Parent then
 					keybindBox.Visible = false
 					keybindScale.Scale = 1
 					keybindBox.Position = keybindShownPos
-					keybindGlow.SetFactor(0)
-					keybindGlow.Sync()
 				end
 			end)
 		end
@@ -1489,26 +1153,26 @@ function Library:CreateWindow(options)
 		local popup = New("Frame", {
 			Parent = gui,
 			Size = UDim2.fromOffset(154, 128),
-			BackgroundColor3 = Library.Theme.Bg2,
+			BackgroundColor3 = Library.Theme.Bg,
 			BorderSizePixel = 0,
 			Visible = false,
 			Active = true,
 			ZIndex = 140
 		})
-		BindTheme(popup, "BackgroundColor3", "Bg2")
-		Stroke(popup, Library.Theme.Outline, 1, "Outline")
+		BindTheme(popup, "BackgroundColor3", "Bg")
+		Stroke(popup, Library.Theme.Border, 1, "Border")
 
 		local inner = New("Frame", {
 			Parent = popup,
 			Position = UDim2.fromOffset(4, 4),
 			Size = UDim2.new(1, -8, 1, -8),
-			BackgroundColor3 = Library.Theme.Bg,
+			BackgroundColor3 = Library.Theme.Section,
 			BorderSizePixel = 0,
 			Active = true,
 			ZIndex = 141
 		})
-		BindTheme(inner, "BackgroundColor3", "Bg")
-		Stroke(inner, Library.Theme.Outline2, 1, "Outline2")
+		BindTheme(inner, "BackgroundColor3", "Section")
+		Stroke(inner, Library.Theme.Outline, 1, "Outline")
 
 		local sv = New("Frame", {
 			Parent = inner,
@@ -1565,8 +1229,8 @@ function Library:CreateWindow(options)
 			Active = true,
 			ZIndex = 145
 		})
-		local svCursorStroke = Stroke(svCursor, Color3.fromRGB(235, 235, 235), 1)
-		local svCursorInner = New("Frame", {
+		Stroke(svCursor, Color3.fromRGB(235, 235, 235), 1)
+		New("Frame", {
 			Parent = svCursor,
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.new(0.5, 0, 0.5, 0),
@@ -1615,34 +1279,31 @@ function Library:CreateWindow(options)
 		local function makeRGBBox(labelText, x)
 			local label = New("TextLabel", {
 				Parent = inner,
-				Position = UDim2.fromOffset(x, 80),
-				Size = UDim2.fromOffset(38, 10),
+				Position = UDim2.fromOffset(x, 79),
+				Size = UDim2.fromOffset(38, 12),
 				BackgroundTransparency = 1,
-				Text = string.upper(labelText),
-				Font = Enum.Font.Code,
-				TextSize = 10,
-				TextColor3 = Library.Theme.Text,
+				Text = labelText,
+				TextColor3 = Library.Theme.Dim,
 				TextXAlignment = Enum.TextXAlignment.Center,
 				ZIndex = 142
 			})
-			BindTheme(label, "TextColor3", "Text")
+			BindTheme(label, "TextColor3", "Dim")
 
 			local box = New("TextBox", {
 				Parent = inner,
 				Position = UDim2.fromOffset(x, 93),
 				Size = UDim2.fromOffset(38, 17),
-				BackgroundColor3 = Color3.fromRGB(24, 24, 26),
+				BackgroundColor3 = Color3.fromRGB(30, 30, 30),
 				BorderSizePixel = 0,
 				Text = "0",
 				PlaceholderText = "0",
 				ClearTextOnFocus = false,
-				Font = Enum.Font.Code,
-				TextSize = 10,
-				TextColor3 = Color3.fromRGB(245, 228, 235),
+				TextColor3 = Library.Theme.Text,
 				PlaceholderColor3 = Library.Theme.Faint,
 				TextXAlignment = Enum.TextXAlignment.Center,
 				ZIndex = 142
 			})
+			BindTheme(box, "TextColor3", "Text")
 			Stroke(box, Library.Theme.Outline2, 1, "Outline2")
 			return box
 		end
@@ -1810,18 +1471,15 @@ function Library:CreateWindow(options)
 	end
 
 	function window:Tab(name)
-		local tabWidth = math.max(42, #name * 6 + 10)
+		local tabLabel = string.lower(tostring(name)) -- tabs are lowercase like the reference
 		local button = New("TextButton", {
 			Parent = tabHolder,
 			BackgroundTransparency = 1,
-			Size = UDim2.fromOffset(tabWidth, 26),
-			Text = string.lower(name),
-			Font = Enum.Font.Code,
-			TextSize = 10,
+			Size = UDim2.fromOffset(TextWidth(tabLabel) + 4, 30),
+			Text = tabLabel,
 			TextColor3 = Library.Theme.TabInactive,
 			AutoButtonColor = false
 		})
-		BindTheme(button, "TextColor3", "TabInactive")
 
 		local page = New("ScrollingFrame", {
 			Parent = content,
@@ -1842,33 +1500,33 @@ function Library:CreateWindow(options)
 		})
 		BindTheme(page, "ScrollBarImageColor3", "Accent")
 
-		local pageTopInset = 8
+		local pageTopInset = 12
 
 		local left = New("Frame", {
 			Parent = page,
 			BackgroundTransparency = 1,
-			Position = UDim2.fromOffset(0, pageTopInset),
-			Size = UDim2.new(0.5, -5, 0, math.max(page.AbsoluteSize.Y - pageTopInset, 0))
+			Position = UDim2.fromOffset(1, pageTopInset),
+			Size = UDim2.new(0.5, -7, 0, math.max(page.AbsoluteSize.Y - pageTopInset, 0))
 		})
 
 		local right = New("Frame", {
 			Parent = page,
 			BackgroundTransparency = 1,
 			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.new(1, 0, 0, pageTopInset),
-			Size = UDim2.new(0.5, -5, 0, math.max(page.AbsoluteSize.Y - pageTopInset, 0))
+			Position = UDim2.new(1, -1, 0, pageTopInset),
+			Size = UDim2.new(0.5, -7, 0, math.max(page.AbsoluteSize.Y - pageTopInset, 0))
 		})
 
 		local leftLayout = New("UIListLayout", {
 			Parent = left,
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, 10)
+			Padding = UDim.new(0, 12)
 		})
 
 		local rightLayout = New("UIListLayout", {
 			Parent = right,
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, 10)
+			Padding = UDim.new(0, 12)
 		})
 
 		local function updatePageCanvas()
@@ -1876,8 +1534,8 @@ function Library:CreateWindow(options)
 			local neededHeight = math.max(contentHeight + pageTopInset, page.AbsoluteSize.Y)
 			neededHeight = math.ceil(neededHeight + 2)
 			page.CanvasSize = UDim2.fromOffset(0, neededHeight)
-			left.Size = UDim2.new(0.5, -5, 0, math.max(neededHeight - pageTopInset, 0))
-			right.Size = UDim2.new(0.5, -5, 0, math.max(neededHeight - pageTopInset, 0))
+			left.Size = UDim2.new(0.5, -7, 0, math.max(neededHeight - pageTopInset, 0))
+			right.Size = UDim2.new(0.5, -7, 0, math.max(neededHeight - pageTopInset, 0))
 		end
 
 		leftLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updatePageCanvas)
@@ -1892,6 +1550,12 @@ function Library:CreateWindow(options)
 			Right = right,
 			Active = false
 		}
+
+		BindThemeUpdater({"TabInactive", "Text"}, function()
+			if button.Parent then
+				button.TextColor3 = tab.Active and Library.Theme.Text or Library.Theme.TabInactive
+			end
+		end)
 
 		button.MouseEnter:Connect(function()
 			if not tab.Active then
@@ -1918,7 +1582,7 @@ function Library:CreateWindow(options)
 			page.Position = UDim2.fromOffset(8, 0)
 			Tween(page, {Position = UDim2.fromOffset(0, 0)}, 0.14)
 			window.ActiveTab = tab
-			Tween(button, {TextColor3 = Library.Theme.Accent}, 0.1)
+			Tween(button, {TextColor3 = Library.Theme.Text}, 0.1)
 		end
 
 		button.MouseButton1Click:Connect(select)
@@ -1928,56 +1592,67 @@ function Library:CreateWindow(options)
 		function tab:Section(titleText, side, customHeight)
 			if typeof(titleText) == "table" then
 				local Data = titleText
-				titleText = Data.Name or Data.name or Data.Title or Data.title or "section"
+				titleText = Data.Name or Data.name or Data.Title or Data.title or "Section"
 				local sideValue = Data.Side or Data.side or side
 				side = (sideValue == 2 or sideValue == "right" or sideValue == "Right") and "right" or "left"
 				customHeight = Data.Height or Data.height or Data.Size or Data.size or customHeight
 			end
 			local parent = (side == "right") and right or left
-			local lowerTitle = string.lower(tostring(titleText))
+			local title = tostring(titleText)
 
 			local section = New("Frame", {
 				Parent = parent,
-				Size = UDim2.new(1, 0, 0, 32),
-				BackgroundColor3 = Color3.fromRGB(19, 19, 19),
+				Size = UDim2.new(1, 0, 0, 40),
+				BackgroundColor3 = Library.Theme.Section,
 				BorderSizePixel = 0,
 				ClipsDescendants = false
 			})
+			BindTheme(section, "BackgroundColor3", "Section")
 			Stroke(section, Library.Theme.Outline, 1, "Outline")
 
-			local titleWidth = math.max(44, #lowerTitle * 7 + 4)
+			local titleWidth = TextWidth(title) + 4
+
+			-- breaks the border line behind the title
+			local gap = New("Frame", {
+				Parent = section,
+				Position = UDim2.fromOffset(8, -2),
+				Size = UDim2.fromOffset(titleWidth + 4, 3),
+				BackgroundColor3 = Library.Theme.Section,
+				BorderSizePixel = 0,
+				ZIndex = 4
+			})
+			BindTheme(gap, "BackgroundColor3", "Section")
+
 			local header = New("TextLabel", {
 				Parent = section,
 				BackgroundTransparency = 1,
-				Position = UDim2.fromOffset(10, -7),
-				Size = UDim2.fromOffset(titleWidth, 13),
-				Text = lowerTitle,
-				Font = Enum.Font.Code,
-				TextSize = 10,
-				TextColor3 = Library.Theme.Accent,
-				TextXAlignment = Enum.TextXAlignment.Left,
+				Position = UDim2.fromOffset(10, -8),
+				Size = UDim2.fromOffset(titleWidth, 14),
+				Text = title,
+				TextColor3 = Library.Theme.Text,
+				TextXAlignment = Enum.TextXAlignment.Center,
 				ZIndex = 5
 			})
-			BindTheme(header, "TextColor3", "Accent")
+			BindTheme(header, "TextColor3", "Text")
 
 			local holder = New("Frame", {
 				Parent = section,
 				BackgroundTransparency = 1,
-				Position = UDim2.fromOffset(10, 15),
-				Size = UDim2.new(1, -20, 1, -22)
+				Position = UDim2.fromOffset(9, 13),
+				Size = UDim2.new(1, -18, 1, -23)
 			})
 
 			local layout = New("UIListLayout", {
 				Parent = holder,
 				SortOrder = Enum.SortOrder.LayoutOrder,
-				Padding = UDim.new(0, 5)
+				Padding = UDim.new(0, 6)
 			})
 
 			local api = {}
 
 			local function resize()
-
-				section.Size = UDim2.new(1, 0, 0, math.max(32, layout.AbsoluteContentSize.Y + 32))
+				local minHeight = tonumber(customHeight) or 0
+				section.Size = UDim2.new(1, 0, 0, math.max(30, minHeight, layout.AbsoluteContentSize.Y + 23))
 				task.defer(updatePageCanvas)
 			end
 
@@ -1986,25 +1661,23 @@ function Library:CreateWindow(options)
 			function api:Label(text)
 				if typeof(text) == "table" then
 					local Data = text
-					text = Data.Name or Data.name or Data.Text or Data.text or "label"
+					text = Data.Name or Data.name or Data.Text or Data.text or "Label"
 				end
 				local label = New("TextLabel", {
 					Parent = holder,
 					BackgroundTransparency = 1,
 					Size = UDim2.new(1, 0, 0, 14),
-					Text = text,
-					Font = Enum.Font.Code,
-					TextSize = 10,
-					TextColor3 = Library.Theme.Text,
+					Text = tostring(text),
+					TextColor3 = Library.Theme.Accent,
 					TextXAlignment = Enum.TextXAlignment.Left
 				})
-				BindTheme(label, "TextColor3", "Text")
+				BindTheme(label, "TextColor3", "Accent")
 				task.defer(resize)
 				local labelApi = {Instance = label}
 				function labelApi:Colorpicker(Data)
 					Data = Data or {}
 					Data.Name = Data.Name or Data.name or tostring(text)
-					return api:Colorpicker(Data)
+					return api:ColorPicker(Data)
 				end
 				labelApi.ColorPicker = labelApi.Colorpicker
 				function labelApi:Keybind(Data)
@@ -2022,47 +1695,28 @@ function Library:CreateWindow(options)
 				if typeof(text) == "table" then
 					local Data = text
 					callback = Data.Callback or Data.callback or callback
-					text = Data.Name or Data.name or Data.Text or Data.text or "button"
+					text = Data.Name or Data.name or Data.Text or Data.text or "Button"
 				end
 				local btn = New("TextButton", {
 					Parent = holder,
-					Size = UDim2.new(1, 0, 0, 20),
+					Size = UDim2.new(1, 0, 0, 18),
 					BackgroundTransparency = 1,
 					BorderSizePixel = 0,
 					Text = "",
 					AutoButtonColor = false
 				})
-				local btnBack = New("Frame", {
-					Parent = btn,
-					Size = UDim2.new(1, 0, 1, 0),
-					BackgroundColor3 = Library.Theme.ControlTop,
-					BorderSizePixel = 0,
-					ZIndex = 1,
-					ClipsDescendants = true
-				})
-				ApplyControlGradient(btnBack)
-				Stroke(btnBack, Library.Theme.Outline2, 1, "Outline2")
-				AddReflection(btnBack, 1)
+				local back, hover = ControlBox(btn, UDim2.fromScale(1, 1))
 				local btnText = New("TextLabel", {
 					Parent = btn,
 					BackgroundTransparency = 1,
-					Size = UDim2.new(1, 0, 1, 0),
-					Text = string.lower(text),
-					Font = Enum.Font.Code,
-					TextSize = 10,
-					TextColor3 = Library.Theme.Dim,
-					ZIndex = 2
+					Size = UDim2.fromScale(1, 1),
+					Text = tostring(text),
+					TextColor3 = Library.Theme.Accent,
+					ZIndex = 3
 				})
-				BindTheme(btnText, "TextColor3", "Dim")
-				AnimateButton(btn)
-				btn.MouseEnter:Connect(function()
-					Tween(btnBack, {BackgroundTransparency = 0.02}, 0.08)
-					Tween(btnText, {TextColor3 = Library.Theme.Text}, 0.08)
-				end)
-				btn.MouseLeave:Connect(function()
-					Tween(btnBack, {BackgroundTransparency = 0}, 0.08)
-					Tween(btnText, {TextColor3 = Library.Theme.Dim}, 0.08)
-				end)
+				BindTheme(btnText, "TextColor3", "Accent")
+				btn.MouseEnter:Connect(function() hover(true) end)
+				btn.MouseLeave:Connect(function() hover(false) end)
 				btn.MouseButton1Click:Connect(function()
 					if callback then callback() end
 				end)
@@ -2077,49 +1731,41 @@ function Library:CreateWindow(options)
 					flagOverride = Data.Flag or Data.flag
 					default = Data.Default or Data.default or default
 					callback = Data.Callback or Data.callback or callback
-					text = Data.Name or Data.name or Data.Text or Data.text or "textbox"
+					text = Data.Name or Data.name or Data.Text or Data.text or "Textbox"
 				end
-				local flag = flagOverride or string.lower(text)
+				local displayName = tostring(text)
+				local flag = flagOverride or string.lower(displayName)
 				local value = tostring(default or "")
 				Library.Flags[flag] = value
 
-				local frame = New("Frame", {
+				local container = New("Frame", {
 					Parent = holder,
-					Size = UDim2.new(1, 0, 0, 20),
-					BackgroundColor3 = Library.Theme.ControlTop,
-					BorderSizePixel = 0,
-					ClipsDescendants = true
+					BackgroundTransparency = 1,
+					Size = UDim2.new(1, 0, 0, 36)
 				})
-				ApplyControlGradient(frame)
-				Stroke(frame, Library.Theme.Outline2, 1, "Outline2")
-				AddReflection(frame, 1)
 
 				local label = New("TextLabel", {
-					Parent = frame,
+					Parent = container,
 					BackgroundTransparency = 1,
-					Position = UDim2.fromOffset(6, 0),
-					Size = UDim2.new(0.45, -6, 1, 0),
-					Text = flag,
-					Font = Enum.Font.Code,
-					TextSize = 10,
-					TextColor3 = Library.Theme.Dim,
-					TextXAlignment = Enum.TextXAlignment.Left,
-					ZIndex = 3
+					Size = UDim2.new(1, 0, 0, 14),
+					Text = displayName,
+					TextColor3 = Library.Theme.Accent,
+					TextXAlignment = Enum.TextXAlignment.Left
 				})
-				BindTheme(label, "TextColor3", "Dim")
+				BindTheme(label, "TextColor3", "Accent")
+
+				local frame, hover = ControlBox(container, UDim2.new(1, 0, 0, 18), UDim2.fromOffset(0, 18))
 
 				local box = New("TextBox", {
 					Parent = frame,
 					BackgroundTransparency = 1,
-					AnchorPoint = Vector2.new(1, 0),
-					Position = UDim2.new(1, -6, 0, 0),
-					Size = UDim2.new(0.55, -4, 1, 0),
+					Position = UDim2.fromOffset(6, 0),
+					Size = UDim2.new(1, -12, 1, 0),
 					Text = value,
-					PlaceholderText = "name",
-					Font = Enum.Font.Code,
-					TextSize = 10,
+					PlaceholderText = "...",
+					PlaceholderColor3 = Library.Theme.Faint,
 					TextColor3 = Library.Theme.Text,
-					TextXAlignment = Enum.TextXAlignment.Right,
+					TextXAlignment = Enum.TextXAlignment.Left,
 					ClearTextOnFocus = false,
 					ZIndex = 3
 				})
@@ -2136,12 +1782,10 @@ function Library:CreateWindow(options)
 					return value
 				end
 
-				box.Focused:Connect(function()
-					Tween(label, {TextColor3 = Library.Theme.Text}, 0.08)
-				end)
+				box.Focused:Connect(function() hover(true) end)
 				box.FocusLost:Connect(function()
+					hover(false)
 					item:Set(box.Text)
-					Tween(label, {TextColor3 = Library.Theme.Dim}, 0.08)
 				end)
 
 				Library.Items[flag] = item
@@ -2151,9 +1795,12 @@ function Library:CreateWindow(options)
 
 			function api:ConfigList(getConfigs, onSelect)
 				local selected = ""
+				local cached = {}
+				local rows = {}
+
 				local frame = New("Frame", {
 					Parent = holder,
-					Size = UDim2.new(1, 0, 0, 92),
+					Size = UDim2.new(1, 0, 0, 98),
 					BackgroundColor3 = Library.Theme.Bg,
 					BorderSizePixel = 0,
 					ClipsDescendants = true
@@ -2165,41 +1812,41 @@ function Library:CreateWindow(options)
 					Parent = frame,
 					BackgroundTransparency = 1,
 					Position = UDim2.fromOffset(8, 4),
-					Size = UDim2.new(1, -16, 0, 12),
-					Text = "saved configs",
-					Font = Enum.Font.Code,
-					TextSize = 10,
+					Size = UDim2.new(1, -16, 0, 14),
+					Text = "Saved Configs",
 					TextColor3 = Library.Theme.Text,
 					TextXAlignment = Enum.TextXAlignment.Left,
-					TextYAlignment = Enum.TextYAlignment.Top
+					ZIndex = 2
 				})
 				BindTheme(header, "TextColor3", "Text")
 
 				local line = New("Frame", {
 					Parent = frame,
-					Position = UDim2.fromOffset(8, 18),
+					Position = UDim2.fromOffset(8, 21),
 					Size = UDim2.new(1, -16, 0, 1),
-					BackgroundColor3 = Library.Theme.Accent,
-					BorderSizePixel = 0
+					BackgroundColor3 = Color3.new(1, 1, 1),
+					BorderSizePixel = 0,
+					ZIndex = 2
 				})
-				BindTheme(line, "BackgroundColor3", "Accent")
 				local lineGradient = New("UIGradient", {Parent = line})
-				local function updateLineGradient()
+				local function updateLine()
+					local lineColor = Library.Theme.Line
+					local edge = lineColor:Lerp(Library.Theme.Bg, 0.72)
 					lineGradient.Color = ColorSequence.new({
-						ColorSequenceKeypoint.new(0.00, Library.Theme.Accent),
-						ColorSequenceKeypoint.new(0.50, Color3.fromRGB(255, 248, 250)),
-						ColorSequenceKeypoint.new(1.00, Library.Theme.Accent)
+						ColorSequenceKeypoint.new(0, edge),
+						ColorSequenceKeypoint.new(0.5, lineColor),
+						ColorSequenceKeypoint.new(1, edge)
 					})
 				end
-				BindThemeUpdater({"Accent"}, updateLineGradient)
-				updateLineGradient()
+				BindThemeUpdater({"Line", "Bg"}, updateLine)
+				updateLine()
 
 				local list = New("ScrollingFrame", {
 					Parent = frame,
 					BackgroundTransparency = 1,
 					BorderSizePixel = 0,
-					Position = UDim2.fromOffset(6, 23),
-					Size = UDim2.new(1, -12, 1, -29),
+					Position = UDim2.fromOffset(5, 26),
+					Size = UDim2.new(1, -10, 1, -31),
 					CanvasSize = UDim2.fromOffset(0, 0),
 					ScrollBarThickness = 0,
 					ScrollBarImageTransparency = 1,
@@ -2214,13 +1861,9 @@ function Library:CreateWindow(options)
 					Padding = UDim.new(0, 2)
 				})
 
-				local rows = {}
 				local item = {}
 
-				function item:Refresh(forceSelected)
-					if forceSelected ~= nil then
-						selected = tostring(forceSelected)
-					end
+				local function build()
 					for _, row in ipairs(rows) do
 						if row and row.Parent then
 							row:Destroy()
@@ -2228,29 +1871,18 @@ function Library:CreateWindow(options)
 					end
 					rows = {}
 
-					local configs = {}
-					local ok, result = pcall(function()
-						return getConfigs and getConfigs() or {}
-					end)
-					if ok and type(result) == "table" then
-						configs = result
-					end
-
-					if #configs == 0 then
+					if #cached == 0 then
 						local none = New("TextLabel", {
 							Parent = list,
 							BackgroundTransparency = 1,
 							Size = UDim2.new(1, 0, 0, 16),
-							Text = "none",
-							Font = Enum.Font.Code,
-							TextSize = 10,
+							Text = "  none",
 							TextColor3 = Library.Theme.Faint,
 							TextXAlignment = Enum.TextXAlignment.Left
 						})
-						BindTheme(none, "TextColor3", "Faint")
 						table.insert(rows, none)
 					else
-						for _, configName in ipairs(configs) do
+						for _, configName in ipairs(cached) do
 							local isSelected = selected ~= "" and configName == selected
 							local row = New("TextButton", {
 								Parent = list,
@@ -2261,9 +1893,9 @@ function Library:CreateWindow(options)
 								ZIndex = 2
 							})
 
-							-- Selected config: accent on the left, fading into black on the right.
-							-- Unlike a solid selection box, the center is a subtle gradient.
 							if isSelected then
+								-- accent on the left -> blended middle -> black on the right
+								local accent = Library.Theme.Accent
 								local highlight = New("Frame", {
 									Parent = row,
 									Size = UDim2.fromScale(1, 1),
@@ -2271,52 +1903,51 @@ function Library:CreateWindow(options)
 									BorderSizePixel = 0,
 									ZIndex = 2
 								})
-								local gradient = New("UIGradient", {Parent = highlight, Rotation = 0})
-								local function updateSelectionGradient()
-									local accent = Library.Theme.Accent
-									gradient.Color = ColorSequence.new({
-										ColorSequenceKeypoint.new(0, accent),
-										ColorSequenceKeypoint.new(0.35, accent:Lerp(Library.Theme.Bg, 0.66)),
-										ColorSequenceKeypoint.new(0.75, Library.Theme.Bg2),
-										ColorSequenceKeypoint.new(1, Color3.new(0, 0, 0))
+								New("UIGradient", {
+									Parent = highlight,
+									Rotation = 0,
+									Color = ColorSequence.new({
+										ColorSequenceKeypoint.new(0.00, accent),
+										ColorSequenceKeypoint.new(0.50, accent:Lerp(Color3.new(0, 0, 0), 0.65)),
+										ColorSequenceKeypoint.new(1.00, Color3.new(0, 0, 0))
+									}),
+									Transparency = NumberSequence.new({
+										NumberSequenceKeypoint.new(0.00, 0.30),
+										NumberSequenceKeypoint.new(0.50, 0.65),
+										NumberSequenceKeypoint.new(1.00, 0.00)
 									})
-									gradient.Transparency = NumberSequence.new({
-										NumberSequenceKeypoint.new(0, 0.48),
-										NumberSequenceKeypoint.new(0.28, 0.70),
-										NumberSequenceKeypoint.new(1, 0.05)
-									})
-								end
-								BindThemeUpdater({"Accent", "Bg", "Bg2"}, updateSelectionGradient)
-								updateSelectionGradient()
+								})
 
-								-- Thin accent edge with a soft shadow that fades towards the center.
-								local edge = New("Frame", {
+								-- shadow on the right side
+								local shadow = New("Frame", {
 									Parent = row,
-									Size = UDim2.new(0, 2, 1, 0),
-									BackgroundColor3 = Library.Theme.Accent,
+									AnchorPoint = Vector2.new(1, 0),
+									Position = UDim2.new(1, 0, 0, 0),
+									Size = UDim2.new(0.35, 0, 1, 0),
+									BackgroundColor3 = Color3.new(0, 0, 0),
 									BorderSizePixel = 0,
 									ZIndex = 3
 								})
-								BindTheme(edge, "BackgroundColor3", "Accent")
+								New("UIGradient", {
+									Parent = shadow,
+									Rotation = 0,
+									Transparency = NumberSequence.new({
+										NumberSequenceKeypoint.new(0, 1),
+										NumberSequenceKeypoint.new(1, 0.15)
+									})
+								})
 							end
 
 							local label = New("TextLabel", {
 								Parent = row,
 								BackgroundTransparency = 1,
-								Position = UDim2.fromOffset(10, 0),
-								Size = UDim2.new(1, -10, 1, 0),
+								Position = UDim2.fromOffset(8, 0),
+								Size = UDim2.new(1, -8, 1, 0),
 								Text = tostring(configName),
-								Font = Enum.Font.Code,
-								TextSize = 10,
-								TextColor3 = isSelected and Library.Theme.Accent or Library.Theme.Dim,
+								TextColor3 = isSelected and Library.Theme.Text or Library.Theme.Dim,
 								TextXAlignment = Enum.TextXAlignment.Left,
 								ZIndex = 4
 							})
-							BindThemeUpdater({"Accent", "Dim"}, function()
-								if label.Parent then
-									label.TextColor3 = isSelected and Library.Theme.Accent or Library.Theme.Dim
-								end
-							end)
 							row.MouseEnter:Connect(function()
 								if configName ~= selected then
 									Tween(label, {TextColor3 = Library.Theme.Text}, 0.08)
@@ -2341,6 +1972,31 @@ function Library:CreateWindow(options)
 					list.CanvasSize = UDim2.fromOffset(0, listLayout.AbsoluteContentSize.Y + 2)
 				end
 
+				function item:Refresh(forceSelected)
+					if forceSelected ~= nil then
+						selected = tostring(forceSelected)
+					end
+					local configs = {}
+					local ok, result = pcall(function()
+						return getConfigs and getConfigs() or {}
+					end)
+					if ok and type(result) == "table" then
+						configs = result
+					end
+					cached = configs
+					build()
+				end
+
+				function item:Restyle()
+					build()
+				end
+
+				BindThemeUpdater({"Accent", "Text", "Dim", "Faint"}, function()
+					if frame.Parent then
+						item:Restyle()
+					end
+				end)
+
 				listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 					list.CanvasSize = UDim2.fromOffset(0, listLayout.AbsoluteContentSize.Y + 2)
 				end)
@@ -2361,10 +2017,11 @@ function Library:CreateWindow(options)
 					default = Data.Default or Data.default or default
 					callback = Data.Callback or Data.callback or callback
 					colorBar = Data.ColorBar or Data.colorBar or Data.Colors or Data.colors or colorBar
-					text = Data.Name or Data.name or Data.Text or Data.text or "toggle"
+					text = Data.Name or Data.name or Data.Text or Data.text or "Toggle"
 				end
+				local displayName = tostring(text)
 				local state = default or false
-				local flag = flagOverride or string.lower(text)
+				local flag = flagOverride or string.lower(displayName)
 				Library.Flags[flag] = state
 
 				local swatchTotalWidth = 0
@@ -2386,38 +2043,39 @@ function Library:CreateWindow(options)
 
 				local box = New("Frame", {
 					Parent = row,
-					Position = UDim2.fromOffset(0, 2),
-					Size = UDim2.fromOffset(9, 9),
+					Position = UDim2.fromOffset(1, 2),
+					Size = UDim2.fromOffset(10, 10),
 					BackgroundColor3 = Library.Theme.Bg3,
-					BorderSizePixel = 0,
-					ClipsDescendants = true
+					BorderSizePixel = 0
 				})
 				BindTheme(box, "BackgroundColor3", "Bg3")
 				Stroke(box, Library.Theme.Outline2, 1, "Outline2")
-				AddReflection(box, 3)
 
 				local fill = New("Frame", {
 					Parent = box,
-					Position = UDim2.fromOffset(1, 1),
-					Size = state and UDim2.fromOffset(7, 7) or UDim2.fromOffset(0, 7),
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(0.5, 0.5),
+					Size = state and UDim2.fromOffset(6, 6) or UDim2.fromOffset(0, 0),
 					BackgroundColor3 = Library.Theme.Accent,
 					BorderSizePixel = 0,
-					BackgroundTransparency = state and 0 or 1,
-					ClipsDescendants = true
+					BackgroundTransparency = state and 0 or 1
 				})
 				BindTheme(fill, "BackgroundColor3", "Accent")
 
 				local label = New("TextLabel", {
 					Parent = row,
 					BackgroundTransparency = 1,
-					Position = UDim2.fromOffset(16, 0),
-					Size = UDim2.new(1, -(16 + swatchTotalWidth + 4), 1, 0),
-					Text = flag,
-					Font = Enum.Font.Code,
-					TextSize = 10,
+					Position = UDim2.fromOffset(17, 0),
+					Size = UDim2.new(1, -(17 + swatchTotalWidth + 4), 1, 0),
+					Text = displayName,
 					TextColor3 = state and Library.Theme.Text or Library.Theme.Dim,
 					TextXAlignment = Enum.TextXAlignment.Left
 				})
+				BindThemeUpdater({"Text", "Dim"}, function()
+					if label.Parent then
+						label.TextColor3 = state and Library.Theme.Text or Library.Theme.Dim
+					end
+				end)
 
 				local suppressRowClick = false
 				local swatchColors = {}
@@ -2473,7 +2131,6 @@ function Library:CreateWindow(options)
 
 				if colorBar then
 					if typeof(colorBar) == "table" then
-
 						for idx, c in ipairs(colorBar) do
 							local xOff = -(idx * 16) + 2
 							makeColorSwatch(idx, c, UDim2.new(1, xOff, 0.5, 0), UDim2.fromOffset(12, 8))
@@ -2496,7 +2153,7 @@ function Library:CreateWindow(options)
 					state = v and true or false
 					Library.Flags[flag] = state
 					Tween(fill, {
-						Size = state and UDim2.fromOffset(7, 7) or UDim2.fromOffset(0, 7),
+						Size = state and UDim2.fromOffset(6, 6) or UDim2.fromOffset(0, 0),
 						BackgroundTransparency = state and 0 or 1
 					}, 0.08)
 					Tween(label, {TextColor3 = state and Library.Theme.Text or Library.Theme.Dim}, 0.08)
@@ -2507,14 +2164,14 @@ function Library:CreateWindow(options)
 
 				function item:Keybind(Data)
 					Data = Data or {}
-					Data.Name = Data.Name or Data.name or text
+					Data.Name = Data.Name or Data.name or displayName
 					Data.Flag = Data.Flag or Data.flag or (flag .. "_key")
 					return api:Keybind(Data)
 				end
 
 				function item:Colorpicker(Data)
 					Data = Data or {}
-					Data.Name = Data.Name or Data.name or text
+					Data.Name = Data.Name or Data.name or displayName
 					Data.Flag = Data.Flag or Data.flag or (flag .. "_color")
 					return api:ColorPicker(Data)
 				end
@@ -2531,8 +2188,8 @@ function Library:CreateWindow(options)
 				return item
 			end
 
-			function api:Slider(text, min, max, default, callback)
-				local flagOverride
+			function api:Slider(text, min, max, default, callback, suffix)
+				local flagOverride, increment
 				if typeof(text) == "table" then
 					local Data = text
 					flagOverride = Data.Flag or Data.flag
@@ -2540,74 +2197,100 @@ function Library:CreateWindow(options)
 					max = Data.Max or Data.max or Data.Maximum or Data.maximum or max
 					default = Data.Default or Data.default or default
 					callback = Data.Callback or Data.callback or callback
-					text = Data.Name or Data.name or Data.Text or Data.text or "slider"
+					suffix = Data.Suffix or Data.suffix or Data.Unit or Data.unit or suffix
+					increment = Data.Increment or Data.increment or Data.Step or Data.step
+					text = Data.Name or Data.name or Data.Text or Data.text or "Slider"
 				end
-				local value = default or min
-				local flag = flagOverride or string.lower(text)
+				min = tonumber(min) or 0
+				max = tonumber(max) or 100
+				suffix = suffix and tostring(suffix) or ""
+				local displayName = tostring(text)
+				local value = tonumber(default) or min
+				local flag = flagOverride or string.lower(displayName)
 				local dragging = false
+
+				if not increment then
+					if min % 1 == 0 and max % 1 == 0 and value % 1 == 0 then
+						increment = 1
+					else
+						increment = 0.1
+					end
+				end
+				local decimals = 0
+				do
+					local step = increment
+					while step < 0.999 and decimals < 6 do
+						step = step * 10
+						decimals = decimals + 1
+					end
+				end
+
+				local function snap(v)
+					v = math.clamp(tonumber(v) or min, min, max)
+					v = math.floor((v - min) / increment + 0.5) * increment + min
+					v = math.clamp(v, min, max)
+					return tonumber(string.format("%." .. decimals .. "f", v))
+				end
+
+				value = snap(value)
 				Library.Flags[flag] = value
 
 				local frame = New("Frame", {
 					Parent = holder,
 					BackgroundTransparency = 1,
-					Size = UDim2.new(1, 0, 0, 28)
+					Size = UDim2.new(1, 0, 0, 32)
 				})
 
 				local nameLabel = New("TextLabel", {
 					Parent = frame,
 					BackgroundTransparency = 1,
 					Position = UDim2.fromOffset(0, 0),
-					Size = UDim2.new(1, -40, 0, 12),
-					Text = flag,
-					Font = Enum.Font.Code,
-					TextSize = 10,
-					TextColor3 = Library.Theme.Dim,
+					Size = UDim2.new(1, -50, 0, 14),
+					Text = displayName,
+					TextColor3 = Library.Theme.Accent,
 					TextXAlignment = Enum.TextXAlignment.Left
 				})
-				BindTheme(nameLabel, "TextColor3", "Dim")
+				BindTheme(nameLabel, "TextColor3", "Accent")
 
 				local valueLabel = New("TextLabel", {
 					Parent = frame,
 					BackgroundTransparency = 1,
 					AnchorPoint = Vector2.new(1, 0),
 					Position = UDim2.new(1, 0, 0, 0),
-					Size = UDim2.fromOffset(36, 12),
-					Text = tostring(value),
-					Font = Enum.Font.Code,
-					TextSize = 10,
+					Size = UDim2.fromOffset(60, 14),
+					Text = tostring(value) .. suffix,
 					TextColor3 = Library.Theme.Dim,
 					TextXAlignment = Enum.TextXAlignment.Right
 				})
 				BindTheme(valueLabel, "TextColor3", "Dim")
 
-				local bar = New("Frame", {
-					Parent = frame,
-					Position = UDim2.fromOffset(0, 15),
-					Size = UDim2.new(1, 0, 0, 7),
-					BackgroundColor3 = Library.Theme.ControlTop,
-					BorderSizePixel = 0,
-					ClipsDescendants = true
-				})
-				ApplyControlGradient(bar)
-				Stroke(bar, Library.Theme.Outline2, 1, "Outline2")
-				AddReflection(bar, 1)
+				-- bigger bar
+				local bar = ControlBox(frame, UDim2.new(1, 0, 0, 10), UDim2.fromOffset(0, 19))
+				bar.ClipsDescendants = true
 
 				local fill = New("Frame", {
 					Parent = bar,
 					Position = UDim2.fromOffset(0, 0),
-					Size = UDim2.new((value - min) / (max - min), 0, 1, 0),
-					BackgroundColor3 = Library.Theme.Accent,
-					BorderSizePixel = 0
+					Size = UDim2.new((value - min) / math.max(max - min, 1e-9), 0, 1, 0),
+					BackgroundColor3 = Color3.new(1, 1, 1),
+					BorderSizePixel = 0,
+					ZIndex = 3
 				})
-				BindTheme(fill, "BackgroundColor3", "Accent")
+				local fillGradient = New("UIGradient", {Parent = fill, Rotation = 90})
+				local function updateFillGradient()
+					local c = Library.Theme.SliderFill
+					fillGradient.Color = ColorSequence.new(c, c:Lerp(Color3.new(0, 0, 0), 0.35))
+				end
+				BindThemeUpdater({"SliderFill"}, updateFillGradient)
+				updateFillGradient()
 
 				local item = {}
 
 				function item:Set(v)
-					value = math.clamp(tonumber(v) or min, min, max)
+					value = snap(v)
 					Library.Flags[flag] = value
-					local pct = (value - min) / (max - min)
-					valueLabel.Text = tostring(value)
+					local pct = (value - min) / math.max(max - min, 1e-9)
+					valueLabel.Text = tostring(value) .. suffix
 					Tween(fill, {Size = UDim2.new(pct, 0, 1, 0)}, dragging and 0.04 or 0.08)
 					if callback then callback(value) end
 				end
@@ -2616,7 +2299,7 @@ function Library:CreateWindow(options)
 
 				local function setFromX(x)
 					local pct = math.clamp((x - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1)
-					item:Set(math.floor((min + (max - min) * pct) * 10 + 0.5) / 10)
+					item:Set(min + (max - min) * pct)
 				end
 
 				bar.InputBegan:Connect(function(input)
@@ -2647,61 +2330,54 @@ function Library:CreateWindow(options)
 					values = Data.Items or Data.items or Data.Options or Data.options or values
 					default = Data.Default or Data.default or default
 					callback = Data.Callback or Data.callback or callback
-					text = Data.Name or Data.name or Data.Text or Data.text or "dropdown"
+					text = Data.Name or Data.name or Data.Text or Data.text or "Dropdown"
 				end
 				values = values or {}
+				local displayName = tostring(text)
 				local current = default or values[1] or "none"
-				local flag = flagOverride or string.lower(text)
+				local flag = flagOverride or string.lower(displayName)
 				local open = false
 				Library.Flags[flag] = current
 
-				local frame = New("Frame", {
+				local container = New("Frame", {
 					Parent = holder,
-					Size = UDim2.new(1, 0, 0, 20),
-					BackgroundColor3 = Library.Theme.ControlTop,
-					BorderSizePixel = 0,
-					ClipsDescendants = true
-				})
-				ApplyControlGradient(frame)
-				Stroke(frame, Library.Theme.Outline2, 1, "Outline2")
-
-				local mainButton = New("TextButton", {
-					Parent = frame,
 					BackgroundTransparency = 1,
-					Size = UDim2.new(1, 0, 0, 20),
-					Text = "",
-					AutoButtonColor = false,
-					LayoutOrder = 1,
-					ClipsDescendants = true
+					Size = UDim2.new(1, 0, 0, 36)
 				})
-				AddReflection(mainButton, 1)
 
 				local nameLabel = New("TextLabel", {
-					Parent = mainButton,
+					Parent = container,
 					BackgroundTransparency = 1,
-					Position = UDim2.fromOffset(6, 0),
-					Size = UDim2.new(1, -64, 1, 0),
-					Text = flag,
-					Font = Enum.Font.Code,
-					TextSize = 10,
-					TextColor3 = Library.Theme.Dim,
+					Size = UDim2.new(1, 0, 0, 14),
+					Text = displayName,
+					TextColor3 = Library.Theme.Accent,
 					TextXAlignment = Enum.TextXAlignment.Left
 				})
-				BindTheme(nameLabel, "TextColor3", "Dim")
+				BindTheme(nameLabel, "TextColor3", "Accent")
+
+				local box, hover = ControlBox(container, UDim2.new(1, 0, 0, 18), UDim2.fromOffset(0, 18))
+				box.ClipsDescendants = true
+
+				local mainButton = New("TextButton", {
+					Parent = box,
+					BackgroundTransparency = 1,
+					Size = UDim2.new(1, 0, 0, 18),
+					Text = "",
+					AutoButtonColor = false,
+					ZIndex = 3
+				})
 
 				local valueLabel = New("TextLabel", {
 					Parent = mainButton,
 					BackgroundTransparency = 1,
-					AnchorPoint = Vector2.new(1, 0.5),
-					Position = UDim2.new(1, -22, 0.5, 0),
-					Size = UDim2.fromOffset(72, 12),
-					Text = tostring(current):lower(),
-					Font = Enum.Font.Code,
-					TextSize = 10,
-					TextColor3 = Library.Theme.Dim,
-					TextXAlignment = Enum.TextXAlignment.Right
+					Position = UDim2.fromOffset(6, 0),
+					Size = UDim2.new(1, -24, 1, 0),
+					Text = tostring(current),
+					TextColor3 = Library.Theme.Accent,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					ZIndex = 4
 				})
-				BindTheme(valueLabel, "TextColor3", "Dim")
+				BindTheme(valueLabel, "TextColor3", "Accent")
 
 				local arrow = New("TextLabel", {
 					Parent = mainButton,
@@ -2709,67 +2385,77 @@ function Library:CreateWindow(options)
 					AnchorPoint = Vector2.new(1, 0.5),
 					Position = UDim2.new(1, -6, 0.5, 0),
 					Size = UDim2.fromOffset(10, 10),
-					Text = "▾",
-					Font = Enum.Font.Code,
-					TextSize = 12,
-					TextColor3 = Library.Theme.Faint
+					Text = "▼",
+					TextSize = 8,
+					TextColor3 = Library.Theme.Dim,
+					ZIndex = 4
 				})
-				BindTheme(arrow, "TextColor3", "Faint")
+				BindTheme(arrow, "TextColor3", "Dim")
 
-				New("UIListLayout", {Parent = frame, SortOrder = Enum.SortOrder.LayoutOrder})
-
-				mainButton.MouseEnter:Connect(function()
-					Tween(frame, {BackgroundTransparency = 0.02}, 0.08)
-					Tween(nameLabel, {TextColor3 = Library.Theme.Text}, 0.08)
-					Tween(valueLabel, {TextColor3 = Library.Theme.Text}, 0.08)
-				end)
-				mainButton.MouseLeave:Connect(function()
-					if not open then Tween(frame, {BackgroundTransparency = 0}, 0.08) end
-					Tween(nameLabel, {TextColor3 = Library.Theme.Dim}, 0.08)
-					Tween(valueLabel, {TextColor3 = Library.Theme.Dim}, 0.08)
-				end)
+				mainButton.MouseEnter:Connect(function() hover(true) end)
+				mainButton.MouseLeave:Connect(function() hover(false) end)
 
 				local item = {}
+				local optionButtons = {}
+
+				local function refreshOptions()
+					for _, data in ipairs(optionButtons) do
+						if data.Button.Parent then
+							data.Button.TextColor3 = (data.Value == current) and Library.Theme.Accent or Library.Theme.Dim
+						end
+					end
+				end
+				BindThemeUpdater({"Accent", "Dim"}, refreshOptions)
 
 				function item:Set(v)
 					current = v
 					Library.Flags[flag] = v
-					valueLabel.Text = tostring(v):lower()
+					valueLabel.Text = tostring(v)
+					refreshOptions()
 					if callback then callback(v) end
 				end
 
 				function item:Get() return current end
 
-				for i, value in ipairs(values) do
-					local opt = New("TextButton", {
-						Parent = frame,
-						BackgroundTransparency = 1,
-						Size = UDim2.new(1, 0, 0, 16),
-						Text = "   " .. tostring(value):lower(),
-						Font = Enum.Font.Code,
-						TextSize = 10,
-						TextColor3 = Library.Theme.Dim,
-						AutoButtonColor = false,
-						LayoutOrder = i + 1,
-						TextXAlignment = Enum.TextXAlignment.Left
-					})
-					BindTheme(opt, "TextColor3", "Dim")
-					opt.MouseEnter:Connect(function() Tween(opt, {TextColor3 = Library.Theme.Text}, 0.08) end)
-					opt.MouseLeave:Connect(function() Tween(opt, {TextColor3 = Library.Theme.Dim}, 0.08) end)
-					opt.MouseButton1Click:Connect(function()
-						item:Set(value)
-						open = false
-						arrow.Text = "▾"
-						Tween(frame, {Size = UDim2.new(1, 0, 0, 20), BackgroundTransparency = 0}, 0.12)
-						task.defer(resize)
-					end)
+				local openHeight = 18 + (#values * 16) + 2
+				local function setOpen(state)
+					open = state
+					arrow.Text = open and "▲" or "▼"
+					local boxHeight = open and openHeight or 18
+					Tween(box, {Size = UDim2.new(1, 0, 0, boxHeight)}, 0.12)
+					Tween(container, {Size = UDim2.new(1, 0, 0, 18 + boxHeight)}, 0.12)
+					task.defer(resize)
 				end
 
+				for i, v in ipairs(values) do
+					local opt = New("TextButton", {
+						Parent = box,
+						BackgroundTransparency = 1,
+						Position = UDim2.fromOffset(0, 18 + ((i - 1) * 16)),
+						Size = UDim2.new(1, 0, 0, 16),
+						Text = tostring(v),
+						TextColor3 = Library.Theme.Dim,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						AutoButtonColor = false,
+						ZIndex = 4
+					})
+					New("UIPadding", {Parent = opt, PaddingLeft = UDim.new(0, 6)})
+					table.insert(optionButtons, {Button = opt, Value = v})
+					opt.MouseEnter:Connect(function()
+						if v ~= current then Tween(opt, {TextColor3 = Library.Theme.Text}, 0.08) end
+					end)
+					opt.MouseLeave:Connect(function()
+						Tween(opt, {TextColor3 = (v == current) and Library.Theme.Accent or Library.Theme.Dim}, 0.08)
+					end)
+					opt.MouseButton1Click:Connect(function()
+						item:Set(v)
+						setOpen(false)
+					end)
+				end
+				refreshOptions()
+
 				mainButton.MouseButton1Click:Connect(function()
-					open = not open
-					arrow.Text = open and "▴" or "▾"
-					Tween(frame, {Size = UDim2.new(1, 0, 0, open and (20 + #values * 16) or 20), BackgroundTransparency = open and 0.02 or 0}, 0.12)
-					task.defer(resize)
+					setOpen(not open)
 				end)
 
 				Library.Items[flag] = item
@@ -2785,10 +2471,11 @@ function Library:CreateWindow(options)
 					defaultKey = Data.Default or Data.default or Data.Key or Data.key or defaultKey
 					mode = Data.Mode or Data.mode or mode
 					callback = Data.Callback or Data.callback or callback
-					text = Data.Name or Data.name or Data.Text or Data.text or "keybind"
+					text = Data.Name or Data.name or Data.Text or Data.text or "Keybind"
 				end
+				local displayName = tostring(text)
 				local key = KeyFromValue(defaultKey)
-				local flag = flagOverride or string.lower(text):gsub("%s+", "_")
+				local flag = flagOverride or string.lower(displayName):gsub("%s+", "_")
 				mode = string.lower(tostring(mode or "toggle"))
 				if mode ~= "hold" and mode ~= "always" then mode = "toggle" end
 				local waiting = false
@@ -2803,10 +2490,8 @@ function Library:CreateWindow(options)
 					Parent = row,
 					BackgroundTransparency = 1,
 					Position = UDim2.fromOffset(0, 0),
-					Size = UDim2.new(1, -58, 1, 0),
-					Text = string.lower(text),
-					Font = Enum.Font.Code,
-					TextSize = 10,
+					Size = UDim2.new(1, -44, 1, 0),
+					Text = displayName,
 					TextColor3 = Library.Theme.Dim,
 					TextXAlignment = Enum.TextXAlignment.Left
 				})
@@ -2816,50 +2501,47 @@ function Library:CreateWindow(options)
 					Parent = row,
 					AnchorPoint = Vector2.new(1, 0.5),
 					Position = UDim2.new(1, 0, 0.5, 0),
-					Size = UDim2.fromOffset(42, 15),
-					BackgroundTransparency = 1,
+					Size = UDim2.fromOffset(18, 13),
+					BackgroundColor3 = Library.Theme.Accent:Lerp(Color3.new(0, 0, 0), 0.82),
 					BorderSizePixel = 0,
 					Text = "",
 					AutoButtonColor = false
 				})
-
-				local keyButtonBack = New("Frame", {
-					Parent = keyButton,
-					Size = UDim2.new(1, 0, 1, 0),
-					BackgroundColor3 = Library.Theme.ControlTop,
-					BorderSizePixel = 0,
-					ZIndex = 1,
-					ClipsDescendants = true
-				})
-				ApplyControlGradient(keyButtonBack)
-				Stroke(keyButtonBack, Library.Theme.Outline2, 1, "Outline2")
-				AddReflection(keyButtonBack, 1)
+				local keyStroke = Stroke(keyButton, Library.Theme.Accent:Lerp(Color3.new(0, 0, 0), 0.68), 1)
 
 				local keyButtonLabel = New("TextLabel", {
 					Parent = keyButton,
 					BackgroundTransparency = 1,
-					Size = UDim2.new(1, 0, 1, 0),
-					Text = key and key.Name:lower() or "none",
-					Font = Enum.Font.Code,
-					TextSize = 10,
-					TextColor3 = key and Library.Theme.Text or Library.Theme.Faint,
+					Size = UDim2.fromScale(1, 1),
+					Text = "none",
+					TextColor3 = Library.Theme.Accent,
 					ZIndex = 2
 				})
-				BindTheme(keyButtonLabel, "TextColor3", key and "Text" or "Faint")
-				AnimateButton(keyButton)
+
+				local function applyKeyVisual()
+					local txt = key and key.Name:lower() or "none"
+					keyButtonLabel.Text = txt
+					keyButtonLabel.TextColor3 = key and Library.Theme.Accent or Library.Theme.Faint
+					keyButton.Size = UDim2.fromOffset(math.max(18, TextWidth(txt) + 10), 13)
+				end
+				BindThemeUpdater({"Accent", "Faint"}, function()
+					if keyButton.Parent then
+						keyButton.BackgroundColor3 = Library.Theme.Accent:Lerp(Color3.new(0, 0, 0), 0.82)
+						keyStroke.Color = Library.Theme.Accent:Lerp(Color3.new(0, 0, 0), 0.68)
+						if not waiting then
+							applyKeyVisual()
+						end
+					end
+				end)
+				applyKeyVisual()
 
 				row.MouseEnter:Connect(function() Tween(label, {TextColor3 = Library.Theme.Text}, 0.08) end)
 				row.MouseLeave:Connect(function() Tween(label, {TextColor3 = Library.Theme.Dim}, 0.08) end)
-				keyButton.MouseEnter:Connect(function() Tween(keyButtonBack, {BackgroundTransparency = 0.03}, 0.08) end)
-				keyButton.MouseLeave:Connect(function() Tween(keyButtonBack, {BackgroundTransparency = 0}, 0.08) end)
 
-				local currentMode = string.lower(mode or "toggle")
-				if currentMode ~= "toggle" and currentMode ~= "hold" and currentMode ~= "always" then
-					currentMode = "toggle"
-				end
+				local currentMode = mode
 
 				local bind = {
-					Name = string.lower(text),
+					Name = string.lower(displayName),
 					Key = key,
 					Mode = currentMode,
 					State = currentMode == "always",
@@ -2886,8 +2568,7 @@ function Library:CreateWindow(options)
 						key = newKey
 						bind.Key = key
 						Library.Flags[flag .. "_key"] = key
-						keyButtonLabel.Text = key.Name:lower()
-						keyButtonLabel.TextColor3 = Library.Theme.Text
+						applyKeyVisual()
 						if flag == "menu" then Library.MenuKey = key; Library.MenuKeybind = tostring(key) end
 						Library:RefreshKeybinds()
 					end
@@ -2923,29 +2604,21 @@ function Library:CreateWindow(options)
 					return bind.Mode
 				end
 
+				-- right click for mode
 				local modeDropdownOpen = false
 				local modeDropdown = New("Frame", {
 					Parent = row,
 					AnchorPoint = Vector2.new(1, 0),
 					Position = UDim2.new(1, 0, 1, 3),
-					Size = UDim2.fromOffset(62, 52),
-					BackgroundColor3 = Library.Theme.Bg2,
+					Size = UDim2.fromOffset(60, 50),
+					BackgroundColor3 = Library.Theme.Bg,
 					BorderSizePixel = 0,
 					Visible = false,
 					Active = true,
 					ZIndex = 60
 				})
-				Stroke(modeDropdown, Library.Theme.Outline, 1, "Outline")
-
-				local modeDropdownInner = New("Frame", {
-					Parent = modeDropdown,
-					Position = UDim2.fromOffset(3, 3),
-					Size = UDim2.new(1, -6, 1, -6),
-					BackgroundColor3 = Library.Theme.Bg,
-					BorderSizePixel = 0,
-					ZIndex = 61
-				})
-				Stroke(modeDropdownInner, Library.Theme.Outline2, 1, "Outline2")
+				BindTheme(modeDropdown, "BackgroundColor3", "Bg")
+				Stroke(modeDropdown, Library.Theme.Border, 1, "Border")
 
 				local function pointInside(guiObject, point)
 					local pos, size = guiObject.AbsolutePosition, guiObject.AbsoluteSize
@@ -2957,16 +2630,22 @@ function Library:CreateWindow(options)
 					modeDropdown.Visible = modeDropdownOpen
 				end
 
+				local function refreshModeDropdownColors()
+					for _, child in ipairs(modeDropdown:GetChildren()) do
+						if child:IsA("TextButton") then
+							child.TextColor3 = (child.Text == bind.Mode and Library.Theme.Accent or Library.Theme.Dim)
+						end
+					end
+				end
+
 				local modeOptions = {"toggle", "hold", "always"}
 				for idx, modeName in ipairs(modeOptions) do
 					local opt = New("TextButton", {
-						Parent = modeDropdownInner,
-						Position = UDim2.fromOffset(3, 2 + ((idx - 1) * 15)),
-						Size = UDim2.new(1, -6, 0, 14),
+						Parent = modeDropdown,
+						Position = UDim2.fromOffset(6, 3 + ((idx - 1) * 15)),
+						Size = UDim2.new(1, -12, 0, 14),
 						BackgroundTransparency = 1,
 						Text = modeName,
-						Font = Enum.Font.Code,
-						TextSize = 10,
 						TextColor3 = Library.Theme.Dim,
 						TextXAlignment = Enum.TextXAlignment.Left,
 						AutoButtonColor = false,
@@ -2980,21 +2659,9 @@ function Library:CreateWindow(options)
 					end)
 					opt.MouseButton1Click:Connect(function()
 						item:SetMode(modeName)
-						for _, child in ipairs(modeDropdownInner:GetChildren()) do
-							if child:IsA("TextButton") then
-								child.TextColor3 = (child.Text == bind.Mode and Library.Theme.Accent or Library.Theme.Dim)
-							end
-						end
+						refreshModeDropdownColors()
 						setModeDropdownOpen(false)
 					end)
-				end
-
-				local function refreshModeDropdownColors()
-					for _, child in ipairs(modeDropdownInner:GetChildren()) do
-						if child:IsA("TextButton") then
-							child.TextColor3 = (child.Text == bind.Mode and Library.Theme.Accent or Library.Theme.Dim)
-						end
-					end
 				end
 
 				keyButton.MouseButton2Click:Connect(function()
@@ -3017,19 +2684,18 @@ function Library:CreateWindow(options)
 					if waiting then return end
 					waiting = true
 					keyButtonLabel.Text = "..."
-					Tween(keyButtonBack, {BackgroundTransparency = 0.03}, 0.08)
+					keyButtonLabel.TextColor3 = Library.Theme.Accent
+					keyButton.Size = UDim2.fromOffset(24, 13)
 					local temp
 					temp = UIS.InputBegan:Connect(function(input, gp)
 						if gp then return end
 						if input.UserInputType == Enum.UserInputType.Keyboard then
-							item:Set(input.KeyCode)
 							waiting = false
-							Tween(keyButtonBack, {BackgroundTransparency = 0}, 0.08)
+							item:Set(input.KeyCode)
 							temp:Disconnect()
 						elseif input.UserInputType == Enum.UserInputType.MouseButton2 or input.UserInputType == Enum.UserInputType.MouseButton3 then
-							item:Set(input.UserInputType)
 							waiting = false
-							Tween(keyButtonBack, {BackgroundTransparency = 0}, 0.08)
+							item:Set(input.UserInputType)
 							temp:Disconnect()
 						end
 					end)
@@ -3047,52 +2713,44 @@ function Library:CreateWindow(options)
 					flagOverride = Data.Flag or Data.flag
 					default = Data.Default or Data.default or default
 					callback = Data.Callback or Data.callback or callback
-					text = Data.Name or Data.name or Data.Text or Data.text or "colorpicker"
+					text = Data.Name or Data.name or Data.Text or Data.text or "Colorpicker"
 				end
+				local displayName = tostring(text)
 				local currentColor = default or Library.Theme.Accent
-				local flag = flagOverride or string.lower(text)
+				local flag = flagOverride or string.lower(displayName)
 
-				local frame = New("Frame", {
+				local row = New("Frame", {
 					Parent = holder,
-					Size = UDim2.new(1, 0, 0, 20),
-					BackgroundColor3 = Library.Theme.ControlTop,
-					BorderSizePixel = 0,
-					ClipsDescendants = false
+					BackgroundTransparency = 1,
+					Size = UDim2.new(1, 0, 0, 16)
 				})
-				ApplyControlGradient(frame)
-				Stroke(frame, Library.Theme.Outline2, 1, "Outline2")
-				local frameReflect = AddReflection(frame, 1)
-				frameReflect.ZIndex = 1
-				frameReflect.Active = false
 
-				local button = New("TextButton", {
-					Parent = frame,
-					Size = UDim2.new(1, 0, 1, 0),
+				local rowButton = New("TextButton", {
+					Parent = row,
+					Size = UDim2.fromScale(1, 1),
 					BackgroundTransparency = 1,
 					Text = "",
 					AutoButtonColor = false,
-					ZIndex = 3
+					ZIndex = 2
 				})
 
 				local label = New("TextLabel", {
-					Parent = button,
+					Parent = row,
 					BackgroundTransparency = 1,
-					Position = UDim2.fromOffset(6, 0),
-					Size = UDim2.new(1, -46, 1, 0),
-					Text = flag,
-					Font = Enum.Font.Code,
-					TextSize = 10,
+					Position = UDim2.fromOffset(0, 0),
+					Size = UDim2.new(1, -40, 1, 0),
+					Text = displayName,
 					TextColor3 = Library.Theme.Dim,
 					TextXAlignment = Enum.TextXAlignment.Left,
-					ZIndex = 4
+					ZIndex = 1
 				})
 				BindTheme(label, "TextColor3", "Dim")
 
 				local preview = New("TextButton", {
-					Parent = button,
+					Parent = row,
 					AnchorPoint = Vector2.new(1, 0.5),
-					Position = UDim2.new(1, -7, 0.5, 0),
-					Size = UDim2.fromOffset(26, 12),
+					Position = UDim2.new(1, 0, 0.5, 0),
+					Size = UDim2.fromOffset(26, 10),
 					BackgroundColor3 = currentColor,
 					BorderSizePixel = 0,
 					Text = "",
@@ -3101,6 +2759,11 @@ function Library:CreateWindow(options)
 					ZIndex = 5
 				})
 				Stroke(preview, Library.Theme.Outline2, 1, "Outline2")
+				New("UIGradient", {
+					Parent = preview,
+					Rotation = 90,
+					Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(190, 190, 190))
+				})
 
 				local picker = CreateFloatingColorPicker(preview, currentColor, function(newColor)
 					currentColor = newColor
@@ -3108,14 +2771,10 @@ function Library:CreateWindow(options)
 					if callback then callback(newColor) end
 				end)
 
-				button.MouseEnter:Connect(function()
-					Tween(frame, {BackgroundTransparency = 0.02}, 0.08)
+				rowButton.MouseEnter:Connect(function()
 					Tween(label, {TextColor3 = Library.Theme.Text}, 0.08)
 				end)
-				button.MouseLeave:Connect(function()
-					if not picker:IsOpen() then
-						Tween(frame, {BackgroundTransparency = 0}, 0.08)
-					end
+				rowButton.MouseLeave:Connect(function()
 					Tween(label, {TextColor3 = Library.Theme.Dim}, 0.08)
 				end)
 
@@ -3127,13 +2786,8 @@ function Library:CreateWindow(options)
 					picker:Toggle()
 				end
 
-				button.MouseButton1Click:Connect(toggleOpen)
+				rowButton.MouseButton1Click:Connect(toggleOpen)
 				preview.MouseButton1Click:Connect(toggleOpen)
-				frameReflect.InputBegan:Connect(function(input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 then
-						toggleOpen()
-					end
-				end)
 
 				local item = {}
 				function item:Set(value)
@@ -3178,7 +2832,7 @@ function Library:Window(Data)
 	Data = Data or {}
 	local window = self:CreateWindow({
 		Title = Data.Name or Data.name or Data.Title or Data.title or "junt.hax.club",
-		Size = Data.Size or Data.size or UDim2.fromOffset(560, 500),
+		Size = Data.Size or Data.size or UDim2.fromOffset(620, 470),
 		Logo = Data.Logo or Data.logo or Data.LogoImage or Data.logoImage or nil,
 		LogoSize = Data.LogoSize or Data.logoSize or 18
 	})
@@ -3189,10 +2843,6 @@ end
 
 function Library:Create(Data)
 	return self:Window(Data)
-end
-
-function Library:Notification(message, duration)
-	return self:Notify(message, duration)
 end
 
 function Library:Watermark(text)
@@ -3318,15 +2968,18 @@ function Library:CreateSettingsPage(window, keybindList, watermark)
 	local themeItems = {
 		{"Accent", "Accent"},
 		{"Background", "Bg"},
-		{"Background 2", "Bg2"},
-		{"Background 3", "Bg3"},
+		{"Top Bar", "Bg2"},
+		{"Section", "Section"},
 		{"Control Top", "ControlTop"},
 		{"Control Bottom", "ControlBottom"},
+		{"Slider Fill", "SliderFill"},
 		{"Text", "Text"},
 		{"Dim Text", "Dim"},
 		{"Faint Text", "Faint"},
-		{"Outline", "Outline"},
-		{"Outline 2", "Outline2"},
+		{"Section Border", "Outline"},
+		{"Control Border", "Outline2"},
+		{"Window Border", "Border"},
+		{"Top Line", "Line"},
 		{"Tab Inactive", "TabInactive"},
 		{"Tab Hover", "TabInactiveHover"},
 	}
