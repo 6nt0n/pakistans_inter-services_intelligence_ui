@@ -1,3 +1,4 @@
+
 if getgenv().Library and type(getgenv().Library) == "table" and getgenv().Library.Unload then
 	pcall(function()
 		getgenv().Library:Unload()
@@ -2253,25 +2254,77 @@ function Library:CreateWindow(options)
 							local isSelected = selected ~= "" and configName == selected
 							local row = New("TextButton", {
 								Parent = list,
-								BackgroundTransparency = isSelected and 0.88 or 1,
-								BackgroundColor3 = Library.Theme.Accent,
+								BackgroundTransparency = 1,
 								Size = UDim2.new(1, 0, 0, 16),
-								Text = "  " .. tostring(configName),
+								Text = "",
+								AutoButtonColor = false,
+								ZIndex = 2
+							})
+
+							-- Selected config: accent on the left, fading into black on the right.
+							-- Unlike a solid selection box, the center is a subtle gradient.
+							if isSelected then
+								local highlight = New("Frame", {
+									Parent = row,
+									Size = UDim2.fromScale(1, 1),
+									BackgroundColor3 = Color3.new(1, 1, 1),
+									BorderSizePixel = 0,
+									ZIndex = 2
+								})
+								local gradient = New("UIGradient", {Parent = highlight, Rotation = 0})
+								local function updateSelectionGradient()
+									local accent = Library.Theme.Accent
+									gradient.Color = ColorSequence.new({
+										ColorSequenceKeypoint.new(0, accent),
+										ColorSequenceKeypoint.new(0.35, accent:Lerp(Library.Theme.Bg, 0.66)),
+										ColorSequenceKeypoint.new(0.75, Library.Theme.Bg2),
+										ColorSequenceKeypoint.new(1, Color3.new(0, 0, 0))
+									})
+									gradient.Transparency = NumberSequence.new({
+										NumberSequenceKeypoint.new(0, 0.48),
+										NumberSequenceKeypoint.new(0.28, 0.70),
+										NumberSequenceKeypoint.new(1, 0.05)
+									})
+								end
+								BindThemeUpdater({"Accent", "Bg", "Bg2"}, updateSelectionGradient)
+								updateSelectionGradient()
+
+								-- Thin accent edge with a soft shadow that fades towards the center.
+								local edge = New("Frame", {
+									Parent = row,
+									Size = UDim2.new(0, 2, 1, 0),
+									BackgroundColor3 = Library.Theme.Accent,
+									BorderSizePixel = 0,
+									ZIndex = 3
+								})
+								BindTheme(edge, "BackgroundColor3", "Accent")
+							end
+
+							local label = New("TextLabel", {
+								Parent = row,
+								BackgroundTransparency = 1,
+								Position = UDim2.fromOffset(10, 0),
+								Size = UDim2.new(1, -10, 1, 0),
+								Text = tostring(configName),
 								Font = Enum.Font.Code,
 								TextSize = 10,
 								TextColor3 = isSelected and Library.Theme.Accent or Library.Theme.Dim,
 								TextXAlignment = Enum.TextXAlignment.Left,
-								AutoButtonColor = false
+								ZIndex = 4
 							})
-							BindTheme(row, "BackgroundColor3", "Accent")
+							BindThemeUpdater({"Accent", "Dim"}, function()
+								if label.Parent then
+									label.TextColor3 = isSelected and Library.Theme.Accent or Library.Theme.Dim
+								end
+							end)
 							row.MouseEnter:Connect(function()
 								if configName ~= selected then
-									Tween(row, {TextColor3 = Library.Theme.Text}, 0.08)
+									Tween(label, {TextColor3 = Library.Theme.Text}, 0.08)
 								end
 							end)
 							row.MouseLeave:Connect(function()
 								if configName ~= selected then
-									Tween(row, {TextColor3 = Library.Theme.Dim}, 0.08)
+									Tween(label, {TextColor3 = Library.Theme.Dim}, 0.08)
 								end
 							end)
 							row.MouseButton1Click:Connect(function()
