@@ -57,16 +57,16 @@ local Library = {
 		Bg3 = Color3.fromRGB(18, 18, 21),
 		Section = Color3.fromRGB(19, 19, 19),
 		ControlTop = Color3.fromRGB(39, 36, 38),
-		ControlBottom = Color3.fromRGB(12, 10, 12),
+		ControlBottom = Color3.fromRGB(30, 27, 29),
 		Outline = Color3.fromRGB(38, 30, 34),
 		Outline2 = Color3.fromRGB(28, 20, 24),
-		Border = Color3.fromRGB(38, 30, 34),
-		Text = Color3.fromRGB(232, 210, 218),
-		Dim = Color3.fromRGB(190, 164, 174),
+		Border = Color3.fromRGB(52, 44, 48),
+		Text = Color3.fromRGB(240, 222, 230),
+		Dim = Color3.fromRGB(196, 172, 182),
 		Faint = Color3.fromRGB(136, 110, 120),
-		Accent = Color3.fromRGB(211, 170, 182),
-		SliderFill = Color3.fromRGB(211, 170, 182),
-		Line = Color3.fromRGB(211, 170, 182),
+		Accent = Color3.fromRGB(245, 196, 214),
+		SliderFill = Color3.fromRGB(236, 184, 204),
+		Line = Color3.fromRGB(248, 214, 228),
 		TabInactive = Color3.fromRGB(135, 125, 135),
 		TabInactiveHover = Color3.fromRGB(165, 150, 165)
 	}
@@ -1149,239 +1149,297 @@ function Library:CreateWindow(options)
 		local draggingSV = false
 		local draggingHue = false
 		local open = false
-
+	
+		-- layout
+		local PAD = 8
+		local SV_W, SV_H = 140, 100
+		local HUE_W = 14
+		local HUE_X = PAD + SV_W + 8
+		local LABEL_Y = PAD + SV_H + 8
+		local BOX_Y = LABEL_Y + 13
+		local HEX_Y = BOX_Y + 18 + 6
+		local POPUP_W = HUE_X + HUE_W + PAD
+		local POPUP_H = HEX_Y + 18 + PAD
+		local BOX_W = math.floor((POPUP_W - PAD * 2 - 12) / 3)
+	
+		local white = Color3.new(1, 1, 1)
+		local black = Color3.new(0, 0, 0)
+	
 		local popup = New("Frame", {
 			Parent = gui,
-			Size = UDim2.fromOffset(154, 128),
-			BackgroundColor3 = Library.Theme.Bg,
+			Size = UDim2.fromOffset(POPUP_W, POPUP_H),
+			BackgroundColor3 = Library.Theme.Section,
 			BorderSizePixel = 0,
 			Visible = false,
 			Active = true,
 			ZIndex = 140
 		})
-		BindTheme(popup, "BackgroundColor3", "Bg")
+		BindTheme(popup, "BackgroundColor3", "Section")
 		Stroke(popup, Library.Theme.Border, 1, "Border")
-
-		local inner = New("Frame", {
-			Parent = popup,
-			Position = UDim2.fromOffset(4, 4),
-			Size = UDim2.new(1, -8, 1, -8),
-			BackgroundColor3 = Library.Theme.Section,
-			BorderSizePixel = 0,
-			Active = true,
-			ZIndex = 141
-		})
-		BindTheme(inner, "BackgroundColor3", "Section")
-		Stroke(inner, Library.Theme.Outline, 1, "Outline")
-
+	
+		-- saturation / value square
+		-- left -> right: white fades out (saturation up)
+		-- top -> bottom: black fades in (value down)
 		local sv = New("Frame", {
-			Parent = inner,
-			Position = UDim2.fromOffset(6, 6),
-			Size = UDim2.fromOffset(104, 68),
+			Parent = popup,
+			Position = UDim2.fromOffset(PAD, PAD),
+			Size = UDim2.fromOffset(SV_W, SV_H),
 			BackgroundColor3 = Color3.fromHSV(H, 1, 1),
 			BorderSizePixel = 0,
-			ClipsDescendants = true,
-			Active = true,
-			ZIndex = 142
+			ZIndex = 141
 		})
 		Stroke(sv, Library.Theme.Outline2, 1, "Outline2")
-
-		local white = New("Frame", {
+	
+		local satOverlay = New("Frame", {
 			Parent = sv,
 			Size = UDim2.fromScale(1, 1),
-			BackgroundColor3 = Color3.new(1, 1, 1),
+			BackgroundColor3 = white,
 			BorderSizePixel = 0,
-			Active = true,
-			ZIndex = 143
+			ZIndex = 142
 		})
 		New("UIGradient", {
-			Parent = white,
+			Parent = satOverlay,
+			Rotation = 0,
 			Transparency = NumberSequence.new({
 				NumberSequenceKeypoint.new(0, 0),
 				NumberSequenceKeypoint.new(1, 1)
 			})
 		})
-
-		local black = New("Frame", {
+	
+		local valOverlay = New("Frame", {
 			Parent = sv,
 			Size = UDim2.fromScale(1, 1),
-			BackgroundColor3 = Color3.new(0, 0, 0),
+			BackgroundColor3 = black,
 			BorderSizePixel = 0,
-			Active = true,
-			ZIndex = 144
+			ZIndex = 143
 		})
 		New("UIGradient", {
-			Parent = black,
+			Parent = valOverlay,
 			Rotation = 90,
 			Transparency = NumberSequence.new({
 				NumberSequenceKeypoint.new(0, 1),
 				NumberSequenceKeypoint.new(1, 0)
 			})
 		})
-
-		local svCursor = New("Frame", {
-			Parent = sv,
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(S, 0, 1 - V, 0),
-			Size = UDim2.fromOffset(6, 6),
-			BackgroundTransparency = 1,
-			BorderSizePixel = 0,
-			Active = true,
-			ZIndex = 145
-		})
-		Stroke(svCursor, Color3.fromRGB(235, 235, 235), 1)
-		New("Frame", {
-			Parent = svCursor,
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0.5, 0, 0.5, 0),
-			Size = UDim2.fromOffset(2, 2),
-			BackgroundColor3 = Color3.fromRGB(235, 235, 235),
-			BorderSizePixel = 0,
-			ZIndex = 146
-		})
-
+	
+		-- hue strip (top -> bottom must match Color3.fromHSV order)
 		local hue = New("Frame", {
-			Parent = inner,
-			Position = UDim2.fromOffset(118, 6),
-			Size = UDim2.fromOffset(10, 68),
-			BackgroundColor3 = Color3.new(1, 1, 1),
+			Parent = popup,
+			Position = UDim2.fromOffset(HUE_X, PAD),
+			Size = UDim2.fromOffset(HUE_W, SV_H),
+			BackgroundColor3 = white,
 			BorderSizePixel = 0,
-			Active = true,
-			ZIndex = 142
+			ZIndex = 141
 		})
 		Stroke(hue, Library.Theme.Outline2, 1, "Outline2")
 		New("UIGradient", {
 			Parent = hue,
 			Rotation = 90,
 			Color = ColorSequence.new({
-				ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
-				ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 0, 255)),
-				ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 0, 255)),
-				ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 255)),
-				ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 255, 0)),
-				ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 255, 0)),
-				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 0))
+				ColorSequenceKeypoint.new(0 / 6, Color3.fromRGB(255, 0, 0)),
+				ColorSequenceKeypoint.new(1 / 6, Color3.fromRGB(255, 255, 0)),
+				ColorSequenceKeypoint.new(2 / 6, Color3.fromRGB(0, 255, 0)),
+				ColorSequenceKeypoint.new(3 / 6, Color3.fromRGB(0, 255, 255)),
+				ColorSequenceKeypoint.new(4 / 6, Color3.fromRGB(0, 0, 255)),
+				ColorSequenceKeypoint.new(5 / 6, Color3.fromRGB(255, 0, 255)),
+				ColorSequenceKeypoint.new(6 / 6, Color3.fromRGB(255, 0, 0))
 			})
 		})
-
-		local hueCursor = New("Frame", {
-			Parent = hue,
+	
+		-- cursors live on the popup so they never get clipped at the edges
+		local svCursor = New("Frame", {
+			Parent = popup,
 			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0.5, 0, H, 0),
-			Size = UDim2.fromOffset(14, 3),
-			BackgroundColor3 = Color3.fromRGB(235, 235, 235),
+			Size = UDim2.fromOffset(8, 8),
+			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
-			Active = true,
-			ZIndex = 145
+			ZIndex = 148
 		})
-		Stroke(hueCursor, Color3.new(0, 0, 0), 1)
-
-		local function makeRGBBox(labelText, x)
-			local label = New("TextLabel", {
-				Parent = inner,
-				Position = UDim2.fromOffset(x, 79),
-				Size = UDim2.fromOffset(38, 12),
-				BackgroundTransparency = 1,
-				Text = labelText,
-				TextColor3 = Library.Theme.Dim,
-				TextXAlignment = Enum.TextXAlignment.Center,
-				ZIndex = 142
-			})
-			BindTheme(label, "TextColor3", "Dim")
-
-			local box = New("TextBox", {
-				Parent = inner,
-				Position = UDim2.fromOffset(x, 93),
-				Size = UDim2.fromOffset(38, 17),
-				BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+		New("UICorner", {Parent = svCursor, CornerRadius = UDim.new(1, 0)})
+		New("UIStroke", {Parent = svCursor, Color = white, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border})
+		local svCursorOuter = New("Frame", {
+			Parent = svCursor,
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromOffset(10, 10),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ZIndex = 148
+		})
+		New("UICorner", {Parent = svCursorOuter, CornerRadius = UDim.new(1, 0)})
+		New("UIStroke", {Parent = svCursorOuter, Color = black, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border})
+	
+		local hueCursor = New("Frame", {
+			Parent = popup,
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Size = UDim2.fromOffset(HUE_W + 4, 3),
+			BackgroundColor3 = white,
+			BorderSizePixel = 0,
+			ZIndex = 148
+		})
+		New("UIStroke", {Parent = hueCursor, Color = black, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border})
+	
+		-- invisible hit areas on top, they receive the mouse input
+		local svHit = New("TextButton", {
+			Parent = popup,
+			Position = UDim2.fromOffset(PAD, PAD),
+			Size = UDim2.fromOffset(SV_W, SV_H),
+			BackgroundTransparency = 1,
+			Text = "",
+			AutoButtonColor = false,
+			ZIndex = 150
+		})
+		local hueHit = New("TextButton", {
+			Parent = popup,
+			Position = UDim2.fromOffset(HUE_X - 2, PAD),
+			Size = UDim2.fromOffset(HUE_W + 4, SV_H),
+			BackgroundTransparency = 1,
+			Text = "",
+			AutoButtonColor = false,
+			ZIndex = 150
+		})
+	
+		-- text fields (same look as the other controls)
+		local function makeField(x, y, w, placeholder)
+			local field = New("Frame", {
+				Parent = popup,
+				Position = UDim2.fromOffset(x, y),
+				Size = UDim2.fromOffset(w, 18),
+				BackgroundColor3 = white,
 				BorderSizePixel = 0,
-				Text = "0",
-				PlaceholderText = "0",
-				ClearTextOnFocus = false,
-				TextColor3 = Library.Theme.Text,
+				ZIndex = 141
+			})
+			local gradient = New("UIGradient", {Parent = field, Rotation = 90})
+			local function recolor()
+				if gradient.Parent then
+					gradient.Color = ColorSequence.new(Library.Theme.ControlTop, Library.Theme.ControlBottom)
+				end
+			end
+			BindThemeUpdater({"ControlTop", "ControlBottom"}, recolor)
+			recolor()
+			Stroke(field, Library.Theme.Outline2, 1, "Outline2")
+	
+			local box = New("TextBox", {
+				Parent = field,
+				BackgroundTransparency = 1,
+				Size = UDim2.fromScale(1, 1),
+				Text = "",
+				PlaceholderText = placeholder,
 				PlaceholderColor3 = Library.Theme.Faint,
+				TextColor3 = Library.Theme.Text,
+				ClearTextOnFocus = false,
 				TextXAlignment = Enum.TextXAlignment.Center,
 				ZIndex = 142
 			})
 			BindTheme(box, "TextColor3", "Text")
-			Stroke(box, Library.Theme.Outline2, 1, "Outline2")
 			return box
 		end
-
-		local rBox = makeRGBBox("R", 6)
-		local gBox = makeRGBBox("G", 54)
-		local bBox = makeRGBBox("B", 102)
-
+	
+		local function makeChannel(letter, index)
+			local x = PAD + (index - 1) * (BOX_W + 6)
+			local label = New("TextLabel", {
+				Parent = popup,
+				BackgroundTransparency = 1,
+				Position = UDim2.fromOffset(x, LABEL_Y),
+				Size = UDim2.fromOffset(BOX_W, 12),
+				Text = letter,
+				TextColor3 = Library.Theme.Dim,
+				ZIndex = 142
+			})
+			BindTheme(label, "TextColor3", "Dim")
+			return makeField(x, BOX_Y, BOX_W, "0")
+		end
+	
+		local rBox = makeChannel("R", 1)
+		local gBox = makeChannel("G", 2)
+		local bBox = makeChannel("B", 3)
+		local hexBox = makeField(PAD, HEX_Y, POPUP_W - PAD * 2, "#RRGGBB")
+	
+		-- helpers
+		local function mousePos()
+			-- GetMouseLocation matches AbsolutePosition on gui that ignores the top bar inset
+			return UIS:GetMouseLocation()
+		end
+	
 		local function pointInside(guiObject, point)
 			local pos, size = guiObject.AbsolutePosition, guiObject.AbsoluteSize
 			return point.X >= pos.X and point.X <= pos.X + size.X and point.Y >= pos.Y and point.Y <= pos.Y + size.Y
 		end
-
+	
 		local function positionPopup()
 			local camera = workspace.CurrentCamera
 			local viewport = camera and camera.ViewportSize or Vector2.new(1920, 1080)
-			local preferredX = anchor.AbsolutePosition.X + anchor.AbsoluteSize.X + 6
-			local fallbackX = anchor.AbsolutePosition.X - popup.AbsoluteSize.X - 6
-			local x = preferredX
-			if preferredX + popup.AbsoluteSize.X > viewport.X - 4 then
-				x = fallbackX
+			local ap, as = anchor.AbsolutePosition, anchor.AbsoluteSize
+			local x = ap.X + as.X + 6
+			if x + POPUP_W > viewport.X - 4 then
+				x = ap.X - POPUP_W - 6
 			end
-			if x < 4 then
-				x = math.clamp(preferredX, 4, viewport.X - popup.AbsoluteSize.X - 4)
-			end
-			local y = anchor.AbsolutePosition.Y - 2
-			if y + popup.AbsoluteSize.Y > viewport.Y - 4 then
-				y = viewport.Y - popup.AbsoluteSize.Y - 4
-			end
-			if y < 4 then
-				y = 4
-			end
+			x = math.clamp(x, 4, math.max(4, viewport.X - POPUP_W - 4))
+			local y = math.clamp(ap.Y - 2, 4, math.max(4, viewport.Y - POPUP_H - 4))
 			popup.Position = UDim2.fromOffset(math.floor(x), math.floor(y))
 		end
-
+	
 		local function update(skipCallback)
 			currentColor = Color3.fromHSV(H, S, V)
 			if anchor and anchor.Parent then
 				anchor.BackgroundColor3 = currentColor
 			end
 			sv.BackgroundColor3 = Color3.fromHSV(H, 1, 1)
-			svCursor.Position = UDim2.new(S, 0, 1 - V, 0)
-			hueCursor.Position = UDim2.new(0.5, 0, H, 0)
+			svCursor.Position = UDim2.fromOffset(PAD + S * SV_W, PAD + (1 - V) * SV_H)
+			hueCursor.Position = UDim2.fromOffset(HUE_X + HUE_W / 2, PAD + H * SV_H)
+	
 			local r = math.floor(currentColor.R * 255 + 0.5)
 			local g = math.floor(currentColor.G * 255 + 0.5)
 			local b = math.floor(currentColor.B * 255 + 0.5)
 			if not rBox:IsFocused() then rBox.Text = tostring(r) end
 			if not gBox:IsFocused() then gBox.Text = tostring(g) end
 			if not bBox:IsFocused() then bBox.Text = tostring(b) end
+			if not hexBox:IsFocused() then hexBox.Text = string.format("#%02X%02X%02X", r, g, b) end
+	
 			if onChanged and not skipCallback then
 				onChanged(currentColor)
 			end
 		end
-
-		local function setSV(x, y)
+	
+		local function applyColor(color)
+			local h, s, v = Color3.toHSV(color)
+			if s > 0 and v > 0 then
+				H = h -- keep the hue when the color is grey or black
+			end
+			S, V = s, v
+			update(false)
+		end
+	
+		local function setSV(point)
 			local pos, size = sv.AbsolutePosition, sv.AbsoluteSize
-			S = math.clamp((x - pos.X) / size.X, 0, 1)
-			V = 1 - math.clamp((y - pos.Y) / size.Y, 0, 1)
+			S = math.clamp((point.X - pos.X) / size.X, 0, 1)
+			V = 1 - math.clamp((point.Y - pos.Y) / size.Y, 0, 1)
 			update(false)
 		end
-
-		local function setHue(y)
+	
+		local function setHue(point)
 			local pos, size = hue.AbsolutePosition, hue.AbsoluteSize
-			H = math.clamp((y - pos.Y) / size.Y, 0, 1)
+			H = math.clamp((point.Y - pos.Y) / size.Y, 0, 1)
 			update(false)
 		end
-
+	
 		local function setFromRGBBoxes()
-			local r = math.clamp(tonumber(rBox.Text) or 0, 0, 255)
-			local g = math.clamp(tonumber(gBox.Text) or 0, 0, 255)
-			local b = math.clamp(tonumber(bBox.Text) or 0, 0, 255)
-			rBox.Text = tostring(math.floor(r + 0.5))
-			gBox.Text = tostring(math.floor(g + 0.5))
-			bBox.Text = tostring(math.floor(b + 0.5))
-			H, S, V = Color3.toHSV(Color3.fromRGB(math.floor(r + 0.5), math.floor(g + 0.5), math.floor(b + 0.5)))
-			update(false)
+			local r = math.clamp(math.floor((tonumber(rBox.Text) or 0) + 0.5), 0, 255)
+			local g = math.clamp(math.floor((tonumber(gBox.Text) or 0) + 0.5), 0, 255)
+			local b = math.clamp(math.floor((tonumber(bBox.Text) or 0) + 0.5), 0, 255)
+			applyColor(Color3.fromRGB(r, g, b))
 		end
-
+	
+		local function setFromHexBox()
+			local parsed = ColorFromHex(hexBox.Text)
+			if parsed then
+				applyColor(parsed)
+			else
+				update(true) -- bad input, put the real value back
+			end
+		end
+	
+		-- public api
 		local picker = {}
 		function picker:SetOpen(state)
 			open = state and true or false
@@ -1410,37 +1468,32 @@ function Library:CreateWindow(options)
 		function picker:Set(value)
 			local newColor = typeof(value) == "Color3" and value or ColorFromHex(value)
 			if newColor then
-				H, S, V = Color3.toHSV(newColor)
-				update(false)
+				applyColor(newColor)
 			end
 		end
 		function picker:Get()
 			return currentColor
 		end
-
-		local function beginSV(input)
+	
+		-- input
+		svHit.InputBegan:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 then
 				draggingSV = true
-				setSV(input.Position.X, input.Position.Y)
+				setSV(mousePos())
 			end
-		end
-		local function beginHue(input)
+		end)
+		hueHit.InputBegan:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 then
 				draggingHue = true
-				setHue(input.Position.Y)
+				setHue(mousePos())
 			end
-		end
-
-		sv.InputBegan:Connect(beginSV)
-		white.InputBegan:Connect(beginSV)
-		black.InputBegan:Connect(beginSV)
-		svCursor.InputBegan:Connect(beginSV)
-		hue.InputBegan:Connect(beginHue)
-		hueCursor.InputBegan:Connect(beginHue)
+		end)
+	
 		rBox.FocusLost:Connect(setFromRGBBoxes)
 		gBox.FocusLost:Connect(setFromRGBBoxes)
 		bBox.FocusLost:Connect(setFromRGBBoxes)
-
+		hexBox.FocusLost:Connect(setFromHexBox)
+	
 		AddConnection(UIS.InputEnded, function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 then
 				draggingSV = false
@@ -1450,22 +1503,29 @@ function Library:CreateWindow(options)
 		AddConnection(UIS.InputChanged, function(input)
 			if input.UserInputType == Enum.UserInputType.MouseMovement then
 				if draggingSV then
-					setSV(input.Position.X, input.Position.Y)
+					setSV(mousePos())
 				elseif draggingHue then
-					setHue(input.Position.Y)
+					setHue(mousePos())
 				end
 			end
 		end)
 		AddConnection(UIS.InputBegan, function(input, gp)
 			if gp or not open then return end
 			if input.UserInputType == Enum.UserInputType.MouseButton1 then
-				local pos = input.Position
+				local pos = mousePos()
 				if not pointInside(popup, pos) and not pointInside(anchor, pos) then
 					picker:SetOpen(false)
 				end
 			end
 		end)
-
+	
+		-- follow the swatch if the window gets dragged or scrolled
+		anchor:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+			if open then
+				positionPopup()
+			end
+		end)
+	
 		update(true)
 		return picker
 	end
@@ -2759,11 +2819,6 @@ function Library:CreateWindow(options)
 					ZIndex = 5
 				})
 				Stroke(preview, Library.Theme.Outline2, 1, "Outline2")
-				New("UIGradient", {
-					Parent = preview,
-					Rotation = 90,
-					Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(190, 190, 190))
-				})
 
 				local picker = CreateFloatingColorPicker(preview, currentColor, function(newColor)
 					currentColor = newColor
